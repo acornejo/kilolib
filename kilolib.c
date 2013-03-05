@@ -1,4 +1,5 @@
 #define F_CPU 8000000
+#define DEBUG
 
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -69,11 +70,11 @@ inline void main_init() {
     txtimer_setup();
     motors_setup();
     rxtimer_off();
-    /* debug_init(); */
+    debug_init();
 
 	//initalize analog comparator
 	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
-	DIDR1=3;
+	DIDR1 = 3;
 
 	//initalize adc
 	ADMUX = 0;

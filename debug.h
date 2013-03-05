@@ -5,10 +5,29 @@
 
 #include <stdio.h>
 
+RB_create(debug_buffer, char, 128);
+volatile uint8_t debug_empty = 1;
+
 static int debug_putchar(char c, FILE *stream) {
-    loop_until_bit_is_set(UCSR0A, UDRE0);
-    UDR0 = c;
+    if (debug_empty) {
+        UDR0 = c;
+        debug_empty = 0;
+    } else {
+        UCSR0B &= ~(1<<TXCIE0);
+        RB_back(debug_buffer) = c;
+        RB_pushback(debug_buffer);
+        UCSR0B |= (1<<TXCIE0);
+    }
     return 0;
+}
+
+ISR(USART_TX_vect) {
+    if (RB_empty(debug_buffer)) {
+        debug_empty = 1;
+    } else {
+        UDR0 = RB_front(debug_buffer);
+        RB_popfront(debug_buffer);
+    }
 }
 
 static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE);
@@ -20,7 +39,8 @@ inline void debug_init() {
 	UCSR0A = 0;
     UBRR0 = ((F_CPU/(19200*16UL))-1);
     stdout = &debug_stdout;
-    printf("Kilobot Started\n");
+    RB_init(debug_buffer);
+    printf("Kilobot Started v %d\n", tx_maskon);
 }
 
 #else
