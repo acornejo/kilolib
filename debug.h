@@ -4,6 +4,7 @@
 #ifdef DEBUG
 
 #include <stdio.h>
+#include "ringbuffer.h"
 
 RB_create(debug_buffer, char, 128);
 volatile uint8_t debug_empty = 1;
