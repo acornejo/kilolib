@@ -8,7 +8,7 @@
 #include <util/delay.h>
 
 #include "kilolib.h"
-/* #include "debug.h" */
+#include "debug.h"
 #include "ringbuffer.h"
 #include "macros.h"
 
@@ -223,7 +223,8 @@ int get_voltage() {
 		while((ADCSRA&(1<<ADSC))==1);  // wait until ADC is done
 		sei();                         // reenable interrupts
 
-        return (.0059*(double)ADCW+.0156)*100.0;
+        return ADCW*19/32+2;
+        // (.0059*(double)ADCW+.0156)*100.0;
 	}
 	else
         return -1;

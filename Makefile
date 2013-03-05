@@ -40,7 +40,7 @@ build/ohc.elf: ohc.c messages.c | build
 	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c messages.c
 
 build/merged.hex: build/main.hex build/ohc.hex
-	cat build/main.hex | grep -v ":00000001FF\x0d" > build/merged.hex
+	cat build/main.hex | grep -v ":00000001FF" > build/merged.hex
 	cat build/ohc.hex >> build/merged.hex
 
 program: build/merged.hex
