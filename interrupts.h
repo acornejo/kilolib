@@ -44,27 +44,27 @@ ISR(TIMER1_COMPA_vect) {
         switch(rx_byteindex) {
             case 1:
                 ADMUX = 1;
-                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADIF)|(1<<ADPS1)|(1<<ADPS0);
+                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);
                 ADCSRB = (1<<ADTS0);
                 break;
             case 2:
                 rx_low_gain = ADCW;
                 ADMUX = 0;
-                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADIF)|(1<<ADPS1)|(1<<ADPS0);
+                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);
                 ADCSRB = (1<<ADTS0);
                 break;
             case 3:
                 rx_high_gain = ADCW;
                 break;
             case sizeof(message_t)+1:
-                if (rx_msg.crc == message_crc(&rx_msg)) {
-                    if (rx_msg.type != NORMAL) {
-                        process_specialmessage(rx_msg.type);
-                    } else {
-                        RB_back(rxbuffer) = rx_msg;
-                        RB_pushback(rxbuffer);
-                    }
-                }
+                // if (rx_msg.crc == message_crc(&rx_msg)) {
+                //     if (rx_msg.type != NORMAL) {
+                //         process_specialmessage(rx_msg.type);
+                //     } else {
+                //         RB_back(rxbuffer) = rx_msg;
+                //         RB_pushback(rxbuffer);
+                //     }
+                // }
 
                 rx_leadingbyte = 1;
                 rx_busy = 0;
@@ -85,7 +85,7 @@ ISR(ANALOG_COMP_vect) {
     PORTD |= (1<<1);
 
 	if(rx_leadingbit) {
-        OCR1A = 8*rx_bitcycles+rx_bitcycles/2; // set timeout for end of byte
+        OCR1A = 8*rx_bitcycles+rx_bitcycles/3; // set timeout for end of byte
         rxtimer_on();                          // enable end of byte timer
 		ADCSRA &= ~(1<<ADATE);                 // disable ADC auto trigger conversions
         rx_bytevalue = 0;

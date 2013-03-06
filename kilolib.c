@@ -82,7 +82,7 @@ inline void main_init() {
     RB_init(txbuffer);
     RB_init(rxbuffer);
     state = IDLE;
-    /* OSCCAL = eeprom_read_byte((uint8_t *)0x01); */
+    OSCCAL = eeprom_read_byte((uint8_t *)0x01);
 	tx_maskon = eeprom_read_byte((uint8_t *)0x90);
     tx_maskoff = ~tx_maskon;
     tx_clock = 0;
@@ -197,15 +197,16 @@ void process_specialmessage(message_type_t type) {
 
 int get_ambientlight() {
 	if (!rx_busy) {
-		while((ADCSRA&(1<<ADSC))==1);  // wait until previous ADC is done
+		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
 		cli();                         // disable interrupts
         // select ADC source
 		ADMUX=7;
-        // enable ADC, disable pending interrupt, set prescalar
-		ADCSRA = (1<<ADEN)|(1<<ADIF)|(1<<ADPS1);
-		ADCSRA |= (1<<ADSC);           // start ADC
-		while((ADCSRA&(1<<ADSC))==1);  // wait until ADC is done
+        // enable ADC, set prescalar
+		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
+		ADCSRA |= (1<<ADSC);           // start AD conversio:
+		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
 		sei();                         // reenable interrupts
+
 		return ADCW;
 	}
 	else
@@ -214,18 +215,17 @@ int get_ambientlight() {
 
 int get_voltage() {
 	if (!rx_busy) {
-		while((ADCSRA&(1<<ADSC))==1);  // wait until previous ADC is done
+		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
 		cli();                         // disable interrupts
         // select ADC source
 		ADMUX=6;
-        //enable ADC, disable pending interrupt, set prescalar
-		ADCSRA = (1<<ADEN)|(1<<ADIF)|(1<<ADPS1)|(1<<ADPS0);
-		ADCSRA |= (1<<ADSC);           // start ADC
-		while((ADCSRA&(1<<ADSC))==1);  // wait until ADC is done
+        // enable ADC, set prescalar
+		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
+		ADCSRA |= (1<<ADSC);           // start AD conversion
+		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
 		sei();                         // reenable interrupts
 
-        return ADCW*19/32+2;
-        // (.0059*(double)ADCW+.0156)*100.0;
+        return ADCW*19/32+2; // (.0059*(double)ADCW+.0156)*100.0;
 	}
 	else
         return -1;

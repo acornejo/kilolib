@@ -58,7 +58,7 @@ int main() {
     }
 
     for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = i;
+        msg.rawdata[i] = 0;
 
     while(1) {
         message_send(&msg);

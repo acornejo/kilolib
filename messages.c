@@ -96,7 +96,7 @@ uint8_t message_send(message_t *msg) {
 
     /* Check for collisions. 12 cycles per iteration.
      * delay of 8 bits == 269*8/12 = 180 */
-    for(k=0;k<180;k++) {
+    for(k=0;k<190;k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
             SREG = sreg;
