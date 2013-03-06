@@ -5,6 +5,7 @@
 #define RB_counter unsigned char
 #endif
 
+#define NEEDSPACE
 #ifndef NEEDSPACE
 
 #define RB_create(NAME, T, SIZE) \

@@ -28,15 +28,15 @@ ISR(TIMER0_COMPA_vect) {
  * Triggered for every byte decoded.
  */
 ISR(TIMER1_COMPA_vect) {
-    /* printf("Got byte %c at index %d\n", rx_bytevalue, rx_byteindex); */
+    PORTD &= ~(1<<1);
     if (rx_leadingbyte) {
-        if (rx_bytevalue == 0) {
+        if (rx_bytevalue == 0) {      /* Leading byte received. */
             rx_leadingbyte = 0;
             rx_byteindex = 0;
-        } else { /* Collision occurred. */
-            rx_byteindex = 0;
-            rxtimer_off();
-            txtimer_on();
+        } else {                      /* Collision occurred. */
+            rx_leadingbyte = 1;
+            rx_busy = 0;
+//            txtimer_on();
         }
     } else {
         rx_msg.rawdata[rx_byteindex] = rx_bytevalue;
@@ -66,14 +66,13 @@ ISR(TIMER1_COMPA_vect) {
                     }
                 }
 
-                rx_byteindex = 0;
                 rx_leadingbyte = 1;
                 rx_busy = 0;
-                rxtimer_off();
-                txtimer_on();
+//                txtimer_on();
                 break;
         }
     }
+    rxtimer_off();
     rx_leadingbit = 1;
 }
 
@@ -83,21 +82,13 @@ ISR(TIMER1_COMPA_vect) {
  */
 ISR(ANALOG_COMP_vect) {
 	uint16_t timer = TCNT1;
+    PORTD |= (1<<1);
 
 	if(rx_leadingbit) {
-        rxtimer_on();
-		ADCSRA &= ~(1<<ADATE); // disable ADC auto trigger conversions
-		if(rx_leadingbyte) {
-			//set timeout for end of byte 2816
-			OCR1AH = 0x0b;//high byte for timer compair interrupt
-			OCR1AL = 0x00;//low byte for timer compair interrupt
-		} else {
-			//set timeout for end of byte 2176
-			OCR1AH = 0x08;//high byte for timer compair interrupt
-			OCR1AL = 0x80;//low byte for timer compair interrupt
-		}
+        OCR1A = 8*rx_bitcycles+rx_bitcycles/2; // set timeout for end of byte
+        rxtimer_on();                          // enable end of byte timer
+		ADCSRA &= ~(1<<ADATE);                 // disable ADC auto trigger conversions
         rx_bytevalue = 0;
-        rx_leadingbyte = 0;
 		rx_leadingbit = 0;
 	} else {
 		if (timer<(rx_bitcenter+rx_bitcycles*3)) {

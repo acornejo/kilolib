@@ -81,23 +81,22 @@ uint32_t message_crc(message_t *msg) {
 }
 
 uint8_t message_send(message_t *msg) {
-    uint8_t sreg = SREG;
-    uint8_t ddr = IR_DDR;
     uint16_t k;
     uint8_t byte_idx;
+    uint8_t ddr = IR_DDR;
+    uint8_t sreg = SREG;
     cli();
 
     /* Enable IR output. */
     ir_on();
+
     /* Send start pulse. */
     irsend_one();
+    __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles);
 
-    /* Wait for signal to die down. */
-    for(k=0;k<53;k++)
-        asm volatile("nop\n\t");
-
-    /* Check for collisions. */
-    for(k=0;k<193;k++) {
+    /* Check for collisions. 12 cycles per iteration.
+     * delay of 8 bits == 269*8/12 = 180 */
+    for(k=0;k<180;k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
             SREG = sreg;
@@ -115,20 +114,16 @@ uint8_t message_send(message_t *msg) {
         /* Add start bit to byte. */
         int16_t bitmask = 0x01;
         int16_t byteval = msg->rawdata[byte_idx]<<1 | 1;
-        /* Transmit each bit. Loop overhead is 14 cycles per iteration. */
+        /* Transmit each bit. Loop overhead is 12 cycles per iteration. */
         while(bitmask <= 0x100) {
             if (byteval & bitmask)
                 irsend_one();
             else
                 irsend_zero();
             bitmask <<=1;
-            __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles-14);
+            __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles-12);
         }
     }
-
-    /* Wait for signal to die down. */
-    for(k=0;k<53;k++)
-        asm volatile("nop\n\t");
 
     ACSR |= (1<<ACI);
     IR_DDR = ddr;

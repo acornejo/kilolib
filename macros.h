@@ -14,29 +14,32 @@
 }
 
 #define ports_on() {\
+    DDRD |= (1<<1);\
     DDRD |= (1<<2);\
     PORTD |= (1<<2);\
 }
 
 #define txtimer_setup() {\
-	TCCR0A = 0x00;\
-	TCCR0B = 0x00;\
-	TIMSK0 = 0x02;\
+	TCCR0A = 0;\
+	TCCR0B = 0;\
     OCR0A = 0xFF;\
+	TIMSK0 = (1<<OCIE0A); /* Interrupt enable on match output compare register A */\
 }
 
 #define motors_setup() {\
+    DDRD &= ~(1<<3);\
+    DDRB &= ~(1<<3);\
     TCCR2A |= (1<<COM2A1)|(1<<COM2B1)|(1<<WGM20);\
     TCCR2B |= (1<<CS01);\
-    OCR2B = 0x00;\
-    OCR2A = 0x00;\
+    OCR2B = 0;\
+    OCR2A = 0;\
 }
 
 #define motors_off() {\
     DDRD &= ~(1<<3);\
     DDRB &= ~(1<<3);\
-    OCR2B = 0x00;\
-    OCR2A = 0x00;\
+    OCR2B = 0;\
+    OCR2A = 0;\
 }
 
 #define motors_on() {\
@@ -46,16 +49,19 @@
     OCR2A = 0x00;\
 }
 
-#define rxtimer_on() {\
-    TCNT1H = 0;\
-    TCNT1L = 0;\
+#define rxtimer_setup() {\
     TCCR1A = 0;\
+    TCCR1B = 0;\
+    OCR1A = 0;\
+    TIMSK1 = (1<<OCIE1A); /* Interrupt enable on match output compare register A */\
+}
+
+#define rxtimer_on() {\
+    TCNT1 = 0; /* Reset count */ \
     TCCR1B = 1; /* set prescalar to 1 */\
 }
 
 #define rxtimer_off() {\
-    TCNT1H = 0;\
-    TCNT1L = 0;\
-    TCCR1A = 0;\
     TCCR1B = 0; /* set prescalar to 0 (disabled). */ \
+    TCNT1 = 0; /* Reset count */ \
 }

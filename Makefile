@@ -9,6 +9,7 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
+PFLAGS = -P usb -c avrispmkII -p m328 -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
 
@@ -33,18 +34,21 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 build:
 	mkdir -p $@
 
-build/main.elf: main.c kilolib.c messages.c | build
+build/main.elf: main.c kilolib.c messages.c interrupts.h | build
 	$(AVRCC) $(CFLAGS) -o $@ main.c kilolib.c messages.c
 
 build/ohc.elf: ohc.c messages.c | build
 	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c messages.c
 
 build/merged.hex: build/main.hex build/ohc.hex
-	cat build/main.hex | grep -v ":00000001FF" > build/merged.hex
-	cat build/ohc.hex >> build/merged.hex
+	cat build/main.hex | grep -v ":00000001FF" > $@
+	cat build/ohc.hex >> $@
 
-program: build/merged.hex
-	$(AVRUP) -P usb -c avrispmkII -p m328 -U "flash:w:build/merged.hex"
+program-ohc: build/merged.hex
+	$(AVRUP) $(PFLAGS) "flash:w:$<:i"
+
+program-kilo: build/main.hex
+	$(AVRUP) -F $(PFLAGS) "flash:w:$<:i"
 
 clean:
 	rm -fR build

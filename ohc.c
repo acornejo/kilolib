@@ -5,18 +5,6 @@
 #define green_port PORTB
 #define green_mask (1<<1)
 
-/* leds on */
-/* sbi $05 [PORTB], 1 */
-/* sbi $0b [PORTD], 2 */
-/* IR on */
-/* sbi $0b [PORTD] 3 */
-/* toggle blue off */
-/* cbi $0b [PORTD] 2 */
-/** $0a == DDRD */
-/** $04 == DDRB */
-
-// mistery sbi $0a
-//
 #define F_CPU 8000000L
 
 #include <avr/io.h>
@@ -27,7 +15,6 @@
 #include "messages.h"
 
 #define BAUDRATE 19200
-#define UBRRVAL ((F_CPU/(BAUDRATE*16UL))-1)
 
 #define NOP asm volatile("nop\n\t")
 
@@ -54,7 +41,7 @@ int main() {
 	cli();
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
-    UBRR0 = UBRRVAL;	                            // Set buad rate
+    UBRR0 = ((F_CPU/(BAUDRATE*16UL))-1);            // Set baud rate
 	sei();
 
     tx_maskon = ir_mask;
@@ -68,6 +55,14 @@ int main() {
         blue_port &= ~blue_mask;
         green_port &= ~green_mask;
         _delay_ms(200);
+    }
+
+    for (i=0;i<sizeof(msg.rawdata); i++)
+        msg.rawdata[i] = i;
+
+    while(1) {
+        message_send(&msg);
+        _delay_ms(10);
     }
 
 	while(1) {
@@ -135,8 +130,8 @@ int main() {
 				}
                 break;
             case 'b':
-                msg.type = SLEEP;
-                msg.crc = message_crc(&msg);
+                /* msg.type = SLEEP; */
+                /* msg.crc = message_crc(&msg); */
 				while(!ReceivedByte) {
                     message_send(&msg);
                     green_port |= green_mask;

@@ -1,5 +1,5 @@
 #define F_CPU 8000000
-#define DEBUG
+/* #define DEBUG */
 
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -66,11 +66,10 @@ inline void main_init() {
     cli();
     ports_off();
     ports_on();
-    adc_on();
     txtimer_setup();
     motors_setup();
-    rxtimer_off();
-    debug_init();
+    rxtimer_setup();
+    debug_setup();
 
 	//initalize analog comparator
 	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
@@ -82,14 +81,15 @@ inline void main_init() {
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
-    state = SLEEP;
+    state = IDLE;
+    /* OSCCAL = eeprom_read_byte((uint8_t *)0x01); */
 	tx_maskon = eeprom_read_byte((uint8_t *)0x90);
     tx_maskoff = ~tx_maskon;
     tx_clock = 0;
     tx_increment = 255;
     rx_busy = 0;
-    rx_leadingbit = 0;
-    rx_leadingbyte = 0;
+    rx_leadingbit = 1;
+    rx_leadingbyte = 1;
     rx_byteindex = 0;
     rx_bytevalue = 0;
     rx_high_gain = 0;
