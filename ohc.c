@@ -58,11 +58,12 @@ int main() {
     }
 
     for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = 0;
+        msg.rawdata[i] = 'a'+i;
+    msg.rawdata[11] = 0;
 
     while(1) {
         message_send(&msg);
-        _delay_ms(10);
+        _delay_ms(20);
     }
 
 	while(1) {

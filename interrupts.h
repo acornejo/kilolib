@@ -28,7 +28,6 @@ ISR(TIMER0_COMPA_vect) {
  * Triggered for every byte decoded.
  */
 ISR(TIMER1_COMPA_vect) {
-    PORTD &= ~(1<<1);
     if (rx_leadingbyte) {
         if (rx_bytevalue == 0) {      /* Leading byte received. */
             rx_leadingbyte = 0;
@@ -57,6 +56,7 @@ ISR(TIMER1_COMPA_vect) {
                 rx_high_gain = ADCW;
                 break;
             case sizeof(message_t)+1:
+                printf("%s\n", rx_msg.rawdata);
                 // if (rx_msg.crc == message_crc(&rx_msg)) {
                 //     if (rx_msg.type != NORMAL) {
                 //         process_specialmessage(rx_msg.type);
@@ -82,7 +82,6 @@ ISR(TIMER1_COMPA_vect) {
  */
 ISR(ANALOG_COMP_vect) {
 	uint16_t timer = TCNT1;
-    PORTD |= (1<<1);
 
 	if(rx_leadingbit) {
         OCR1A = 8*rx_bitcycles+rx_bitcycles/3; // set timeout for end of byte

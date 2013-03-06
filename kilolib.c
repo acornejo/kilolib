@@ -1,5 +1,5 @@
 #define F_CPU 8000000
-/* #define DEBUG */
+#define DEBUG
 
 #include <avr/io.h>
 #include <avr/wdt.h>

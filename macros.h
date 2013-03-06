@@ -14,7 +14,6 @@
 }
 
 #define ports_on() {\
-    DDRD |= (1<<1);\
     DDRD |= (1<<2);\
     PORTD |= (1<<2);\
 }
