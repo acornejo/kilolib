@@ -58,13 +58,7 @@ int main() {
     }
 
     for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = 'a'+i;
-    msg.rawdata[11] = 0;
-
-    while(1) {
-        message_send(&msg);
-        _delay_ms(20);
-    }
+        msg.rawdata[i] = 0;
 
 	while(1) {
 		if(ReceivedByte) {
@@ -131,8 +125,8 @@ int main() {
 				}
                 break;
             case 'b':
-                /* msg.type = SLEEP; */
-                /* msg.crc = message_crc(&msg); */
+                msg.type = SLEEP;
+                msg.crc = message_crc(&msg);
 				while(!ReceivedByte) {
                     message_send(&msg);
                     green_port |= green_mask;

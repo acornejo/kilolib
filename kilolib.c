@@ -170,7 +170,7 @@ void process_specialmessage(message_type_t type) {
             bootload();
             break;
         case SLEEP:
-            state = SLEEP;
+            state = SLEEPING;
             break;
         case PAUSE:
         case WAKEUP:
