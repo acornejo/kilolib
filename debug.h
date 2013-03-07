@@ -4,9 +4,13 @@
 #ifdef DEBUG
 
 #include <stdio.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include "ringbuffer.h"
 
-RB_create(debug_buffer, char, 255);
+#define BAUDRATE 19200
+
+RB_create(debug_buffer, char, 511);
 volatile uint8_t debug_empty = 1;
 
 static int debug_putchar(char c, FILE *stream) {
@@ -29,25 +33,26 @@ ISR(USART_UDRE_vect) {
     }
 }
 
-static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE);
+/* static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE); */
 
-inline void debug_setup() {
+inline void debug_init() {
 	DDRD |= (1<<1);                                 // Set UART TxD pin as output
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<TXEN0);                           // Enable transmission
 	UCSR0A = 0;
-    UBRR0 = ((F_CPU/(19200*16UL))-1);
-    stdout = &debug_stdout;
+    UBRR0 = ((F_CPU/(BAUDRATE*16UL))-1);
     RB_init(debug_buffer);
-    printf("\n");
-    printf("+-----------------+\n");
-    printf("| Kilobot Started |\n");
-    printf("+-----------------+\n");
+    // stdout = &debug_stdout;
+    // printf("\n");
+    // printf("+-----------------+\n");
+    // printf("| Kilobot Started |\n");
+    // printf("+-----------------+\n");
 }
+
 
 #else
 
-#define debug_setup()
+#define debug_init()
 #define printf(...)
 
 #endif//DEBUG

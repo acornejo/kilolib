@@ -1,6 +1,6 @@
 #include "messages.h"
-#include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <util/crc16.h>
 
 #ifdef OHC
 #define IR_PORT PORTD
@@ -60,24 +60,12 @@
     )
 
 
-static const PROGMEM uint32_t crc_table[16] = {
-    0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
-    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
-    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
-    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
-};
-
-uint32_t message_crc(message_t *msg) {
+uint16_t message_crc(message_t *msg) {
     uint8_t i;
-    uint8_t tbl_idx;
-    uint32_t crc = 0;
-    for (i = 0; i<sizeof(msg->payload)/sizeof(msg->payload[0]); i++) {
-        tbl_idx = crc ^ (msg->payload[i] >> (0 * 4));
-        crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
-        tbl_idx = crc ^ (msg->payload[i] >> (1 * 4));
-        crc = pgm_read_dword_near(crc_table + (tbl_idx & 0x0f)) ^ (crc >> 4);
-    }
-    return ~crc;
+    uint16_t crc = 0;
+    for (i = 0; i<sizeof(msg->payload)/sizeof(msg->payload[0]); i++)
+        crc = _crc_ccitt_update(crc, msg->payload[i]);
+    return crc;
 }
 
 uint8_t message_send(message_t *msg) {
@@ -95,8 +83,8 @@ uint8_t message_send(message_t *msg) {
     __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles);
 
     /* Check for collisions. 11 cycles per iteration.
-     * delay of 8 bits == 269*8/11 = 190 */
-    for(k=0;k<190;k++) {
+     * delay of 8 bits == 269*8/11 = 196 */
+    for(k=0;k<196;k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
             SREG = sreg;

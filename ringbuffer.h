@@ -2,7 +2,7 @@
 #define __RINGBUFFER_H__
 
 #ifndef RB_counter
-#define RB_counter unsigned char
+#define RB_counter unsigned int
 #endif
 
 #define NEEDSPACE

@@ -1,13 +1,15 @@
 #include "kilolib.h"
 #include "bitfield.h"
+#include "debug.h"
 #include <avr/io.h>
+#include <stdio.h>
 #include <avr/boot.h>
-#include <avr/delay.h>
+#include <util/delay.h>
 
-int8_t  page_count = 0;
-int8_t  page_address = 0;
-int16_t page_word_count = 0;
-int16_t page_buffer[SPM_PAGESIZE];
+uint8_t  page_count;
+uint8_t  page_address;
+uint16_t page_byte_count;
+uint16_t page_buffer[SPM_PAGESIZE/2];
 BF_create(page_table, 220);
 
 inline void goto_program() {
@@ -17,15 +19,17 @@ inline void goto_program() {
 }
 
 void process_message(message_t *msg) {
-    if (msg->type == BOOTLOAD_MSG)
-        if (msg->bootmsg.page_address != page_address) {
+    if (msg->type == BOOTLOAD_MSG) {
+        if (page_address != msg->bootmsg.page_address) {
             page_address = msg->bootmsg.page_address;
-            page_word_count = 0;
+            page_byte_count = 0;
         }
         page_buffer[msg->bootmsg.page_offset] = msg->bootmsg.word1;
         page_buffer[msg->bootmsg.page_offset+1] = msg->bootmsg.word2;
-        page_word_count += 2;
-        if (page_word_count*2 == SPM_PAGESIZE && !BF_get(page_table, page_address)) {
+        page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
+        page_byte_count += 4;
+        if (page_byte_count == SPM_PAGESIZE && !BF_get(page_table, page_address)) {
+            set_color(0,3,0);
             int i,j;
             eeprom_busy_wait ();
 
@@ -45,30 +49,46 @@ void process_message(message_t *msg) {
             if (page_count == 220)
                 goto_program();
         }
-    else {
+        else
+            set_color(0,0,1);
+    } else if (msg->type == BOOT) {
+            asm volatile ("jmp 0x7000");
+    } else {
         if (page_count == 0)
             goto_program();
+        else
+        {
+            uint8_t i;
+            for (i=0; i<220; i++) {
+                debug_putchar(i,0);
+                debug_putchar(BF_get(page_table,i) ? 1 : 0,0);
+            }
+        }
     }
 }
 
 void program_loop() {}
 
 int main() {
-    // initialize hardware
-    main_init();
 	// move interrupt vectors to bootloader interupts
+    cli();
 	MCUCR = (1<<IVCE);
 	MCUCR = (1<<IVSEL);
+    sei();
+    // initialize hardware
+    kilo_init();
+    debug_init();
     // initalize variables
     BF_init(page_table);
     page_count = 0;
-    page_word_count = 0;
+    page_address = 0;
+    page_byte_count = 0;
 
     while(1) {
-        set_color(3,0,0);
-        _delay_ms(1);
+        set_color(0,0,3);
+        _delay_ms(200);
         set_color(0,0,0);
-        _delay_ms(1);
+        _delay_ms(200);
     }
 
     return 0;

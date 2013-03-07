@@ -2,7 +2,7 @@
 #define txtimer_off()       TCCR0B=0
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
-#define is_charging()     (PIND&(1<<0)) != 0
+#define is_charging()       (PIND&(1<<0)) != 0
 
 #define ports_off() {\
     DDRB = 0;\

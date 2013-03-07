@@ -1,5 +1,3 @@
-#define F_CPU 8000000
-
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
@@ -8,7 +6,6 @@
 #include <util/delay.h>
 
 #include "kilolib.h"
-#include "debug.h"
 #include "ringbuffer.h"
 #include "macros.h"
 
@@ -63,14 +60,13 @@ ISR(WDT_vect) {
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
  */
-void main_init() {
+void kilo_init() {
     cli();
     ports_off();
     ports_on();
     txtimer_setup();
     motors_setup();
     rxtimer_setup();
-    debug_setup();
 
 	//initalize analog comparator
 	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
@@ -98,7 +94,8 @@ void main_init() {
     sei();
 }
 
-void main_loop() {
+#ifndef BOOTLOADER
+void kilo_loop() {
     while (1) {
         switch(state) {
             case SLEEPING:
@@ -131,9 +128,9 @@ void main_loop() {
                 break;
             case IDLE:
                 set_color(0,3,0);
-                _delay_ms(1);
+                _delay_ms(200);
                 set_color(0,0,0);
-                _delay_ms(1);
+                _delay_ms(200);
                 break;
             case BATTERY:
 				if(get_voltage()>400)
@@ -160,7 +157,6 @@ void main_loop() {
     }
 }
 
-#ifndef BOOTLOADER
 void process_message(message_t *msg) {
     if (msg->type == NORMAL) {
         RB_back(rxbuffer) = *msg;
@@ -199,6 +195,10 @@ void process_message(message_t *msg) {
             break;
     }
 }
+
+#else
+
+void kilo_loop() {}
 #endif
 
 int get_ambientlight() {

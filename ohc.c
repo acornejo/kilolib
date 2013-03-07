@@ -13,7 +13,8 @@
 
 #define BAUDRATE 19200
 
-int i;
+int i,j;
+uint8_t page;
 uint8_t leds_toggle = 0;
 message_t msg;
 
@@ -61,8 +62,7 @@ int main() {
 
             switch(message_received) {
             case 'a':
-				//send boot load message first
-                msg.type = BOOT;
+/*                msg.type = BOOT;
                 msg.crc = message_crc(&msg);
 				for(i=0;i<100;i++) {
                     message_send(&msg);
@@ -71,24 +71,26 @@ int main() {
                     green_port &= ~green_mask;
 					_delay_ms(10);
 				}
-				_delay_ms(8000);
+				_delay_ms(8000);*/
 
 				// send bootload pages until uart says to stop
-                uint8_t page = 0;
+                page = 0;
                 while (!ReceivedByte) {
                     msg.type = BOOTLOAD_MSG;
                     msg.bootmsg.page_address = page;
-                    for (i=0; i<SPM_PAGESIZE; i+=4) {
-                        msg.bootmsg.page_offset = i;
+                    for (i=0; i<SPM_PAGESIZE; i+=6) {
+                        msg.bootmsg.page_offset = i/2;
                         msg.bootmsg.word1 = pgm_read_word(page*SPM_PAGESIZE+i);
                         msg.bootmsg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
+                        msg.bootmsg.word3 = pgm_read_word(page*SPM_PAGESIZE+i+4);
                         msg.bootmsg.crc = message_crc(&msg);
-                        message_send(&msg);
+                        for (j=0; j<5; j++)
+                            message_send(&msg);
                     }
                     green_port |= green_mask;
-                    _delay_ms(10);
+                    _delay_ms(5);
                     green_port &= ~green_mask;
-                    _delay_ms(10);
+                    _delay_ms(5);
                     page++;
                     if (page >= 220)
                         page = 0;
