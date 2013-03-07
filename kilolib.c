@@ -1,5 +1,4 @@
 #define F_CPU 8000000
-#define DEBUG
 
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -35,6 +34,7 @@ uint16_t rx_low_gain;              // signal strength of second start bit (with 
 
 volatile enum {
     SLEEPING,
+    BOOTLOAD,
     IDLE,
     BATTERY,
     RUNNING,
@@ -42,6 +42,7 @@ volatile enum {
 } state;
 
 
+#ifndef BOOTLOADER
 // Ensure that wdt is inactive after system reset.
 void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
 
@@ -57,6 +58,7 @@ void wdt_init(void) {
 ISR(WDT_vect) {
     wdt_disable();
 }
+#endif
 
 /**
  * Initialize all global variables to a known state.
@@ -81,7 +83,11 @@ inline void main_init() {
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
+#ifdef BOOTLOADER
+    state = BOOTLOAD;
+#else
     state = IDLE;
+#endif
     OSCCAL = eeprom_read_byte((uint8_t *)0x01);
 	tx_maskon = eeprom_read_byte((uint8_t *)0x90);
     tx_maskoff = ~tx_maskon;
@@ -117,24 +123,29 @@ void main_loop() {
                 ports_on();
                 adc_on();
 
-                _delay_us(300);
                 int i;
                 for(i=0;i<10;i++) {
-                    _delay_ms(1);
                     if (rx_busy) {
                         set_color(3,0,0);
                         _delay_ms(100);
                         break;
                     } else {
                         set_color(3,3,3);
+                        _delay_ms(1);
                     }
                 }
+                break;
+            case BOOTLOAD:
+                set_color(3,0,0);
+                _delay_ms(1);
+                set_color(0,0,0);
+                _delay_ms(1);
                 break;
             case IDLE:
                 set_color(0,3,0);
                 _delay_ms(1);
                 set_color(0,0,0);
-                _delay_ms(200);
+                _delay_ms(1);
                 break;
             case BATTERY:
 				if(get_voltage()>400)
@@ -161,11 +172,12 @@ void main_loop() {
     }
 }
 
-void process_specialmessage(message_type_t type) {
+#ifndef BOOTLOADER
+void process_specialmessage(message_t *msg) {
     set_color(0,0,0);
     motors_off();
     txtimer_off();
-    switch (type) {
+    switch (msg->type) {
         case BOOT:
             bootload();
             break;
@@ -194,6 +206,7 @@ void process_specialmessage(message_type_t type) {
             break;
     }
 }
+#endif
 
 int get_ambientlight() {
 	if (!rx_busy) {

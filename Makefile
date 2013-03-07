@@ -1,8 +1,9 @@
-all: ohc main
+all: ohc main bootldr
 
-.PHONY: ohc main
+.PHONY: ohc main bootldr
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
 main: build/main.elf build/main.hex build/main.lss
+bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 
 AVRCC = avr-gcc
 AVROC = avr-objcopy
@@ -11,6 +12,7 @@ AVRUP = avrdude
 
 PFLAGS = -P usb -c avrispmkII -p m328 -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
 OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
 
 FLASH = -R .eeprom -R .fuse -R .lock -R .signature
@@ -39,6 +41,9 @@ build/main.elf: main.c kilolib.c messages.c interrupts.h | build
 
 build/ohc.elf: ohc.c messages.c | build
 	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c messages.c
+
+build/bootldr.elf: bootldr.c kilolib.c messages.c interrupts.h | build
+	$(AVRCC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c messages.c
 
 build/merged.hex: build/main.hex build/ohc.hex
 	cat build/main.hex | grep -v ":00000001FF" > $@

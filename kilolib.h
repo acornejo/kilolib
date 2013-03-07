@@ -1,5 +1,4 @@
 #include "messages.h"
-#include <avr/pgmspace.h>
 
 void set_motors(int8_t, int8_t);
 void set_color(int8_t, int8_t, int8_t);
@@ -13,5 +12,5 @@ void rxbuffer_pop(message_t *);
 uint8_t rxbuffer_size();
 
 void main_loop();
-void process_specialmessage(uint8_t);
+void process_specialmessage(message_t *);
 extern void program_loop();

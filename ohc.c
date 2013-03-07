@@ -22,7 +22,6 @@ int i;
 uint8_t leds_toggle = 0;
 message_t msg;
 
-void send_bootmsg(int,int,int);
 volatile	int ReceivedByte;
 
 int main() {
@@ -79,32 +78,28 @@ int main() {
 				}
 				_delay_ms(8000);
 
-				//next bootload until uart says to stop
+				// send bootload pages until uart says to stop
+                uint8_t page = 0;
                 while (!ReceivedByte) {
-                    uint8_t page;
-                    for(page=0;page<220 && ReceivedByte == 0; page++) {
-                        uint16_t checksum = page;
-                        cli();
-                        send_bootmsg(page,0,250);
-                        _delay_ms(1);
-                        for (i=0; i<SPM_PAGESIZE; i+=2) {
-                            int high = pgm_read_byte(page*SPM_PAGESIZE+i);
-                            int low = pgm_read_byte(page*SPM_PAGESIZE+i+1);
-                            send_bootmsg(high,low,0);
-                            checksum += high;
-                            checksum += low;
-                        }
-                        _delay_ms(1);
-                        uint8_t checksum_low=checksum;
-                        uint8_t checksum_high=checksum>>8;
-                        send_bootmsg(checksum_high,checksum_low,254);
-                        sei(); //allow for uart to rx
-                        green_port |= green_mask;
-                        _delay_ms(10);
-                        green_port &= ~green_mask;
-                        _delay_ms(10);
+                    msg.type = BOOTLOAD_MSG;
+                    msg.page_address = page;
+                    for (i=0; i<SPM_PAGESIZE; i+=4) {
+                        msg.page_offset = i;
+                        msg.word1 = pgm_read_word(page*SPM_PAGESIZE+i);
+                        msg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
+                        msg.crc = message_crc(&msg);
+                        message_send(&msg);
                     }
+                    green_port |= green_mask;
+                    _delay_ms(10);
+                    green_port &= ~green_mask;
+                    _delay_ms(10);
+                    page++;
+                    if (page >= 220)
+                        page = 0;
                 }
+                for (i=0;i<sizeof(msg.rawdata); i++)
+                    msg.rawdata[i] = 0;
                 break;
             case 'i':
                 leds_toggle = !leds_toggle;
@@ -206,74 +201,6 @@ int main() {
 	}
 
     return 0;
-}
-
-void send_bootmsg(int a, int b, int c)
-{
-    uint16_t k;
-	uint16_t data_out[4];
-	uint8_t data_to_send[4]={a,b,c,a+b+c+128};
-
-	//prepare data to send
-	for(k=0;k<4;k++) {
-		data_out[k]=(data_to_send[k] & (1<<0))*128 +
-				(data_to_send[k] & (1<<1))*32 +
-				(data_to_send[k] & (1<<2))*8 +
-				(data_to_send[k] & (1<<3))*2+
-				(data_to_send[k] & (1<<4))/2+
-				(data_to_send[k] & (1<<5))/8 +
-				(data_to_send[k] & (1<<6))/32 +
-				(data_to_send[k] & (1<<7))/128;
-
-		data_out[k]=data_out[k]<<1;
-		data_out[k]++;
-	}
-
-    //send start pulse
-    ir_port |= tx_maskon;
-    NOP;
-    NOP;
-    ir_port &= tx_maskoff;
-
-    //wait for own signal to die down
-    for(k=0;k<53;k++)
-        NOP;
-
-    //check for collision
-    for(k=0;k<193;k++) {
-        if((ACSR & (1<<ACO))>0) NOP;
-        if((ACSR & (1<<ACO))>0) NOP;
-    }
-
-    uint16_t byte_sending;
-    for(byte_sending=0;byte_sending<4;byte_sending++) {
-        int i=8;
-        while(i>=0) {
-            if(data_out[byte_sending] & 1) {
-                ir_port |= tx_maskon;
-                NOP;
-                NOP;
-            } else {
-                ir_port &= tx_maskoff;
-                NOP;
-                NOP;
-            }
-            ir_port &= tx_maskoff;
-            for(k=0;k<35;k++)
-                NOP;
-            data_out[byte_sending]=data_out[byte_sending]>>1;
-            i--;
-        }
-    }
-
-    //ensure led is off
-    ir_port &= tx_maskoff;
-
-    //wait for own signal to die down
-    for(k=0;k<50;k++)
-        NOP;
-
-    ACSR |= (1<<ACI);
 }
 
 ISR(USART_RX_vect) {

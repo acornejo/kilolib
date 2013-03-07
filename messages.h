@@ -10,12 +10,20 @@ typedef union {
     uint8_t rawdata[12];
     struct {
         uint8_t payload[8];
-        uint8_t checksum[2];
+        uint32_t crc_payload;
     };
     struct {
         uint8_t data[7];
         uint8_t type;
         uint32_t crc;
+    };
+    struct {
+        uint8_t page_address;
+        uint16_t page_offset;
+        uint16_t word1;
+        uint16_t word2;
+        uint8_t bootmsg_type;
+        uint32_t crc_bootload;
     };
 } message_t;
 
@@ -34,7 +42,9 @@ typedef enum {
     CHARGE,
     VOLTAGE,
     RUN,
-    RESET
+    RESET,
+    BOOTLOAD_MSG,
+
 } message_type_t;
 
 #endif//__MESSAGES_H__

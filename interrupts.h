@@ -2,6 +2,7 @@
 
 static const uint16_t rx_bitcenter = rx_bitcycles+rx_bitcycles/2;
 
+#ifndef BOOTLOADER
 /**
  * Timer0 interrupt.
  * Used to send messages every tx_period ticks.
@@ -23,6 +24,7 @@ ISR(TIMER0_COMPA_vect) {
     }
 }
 
+#endif
 /**
  * Timer1 interrupt.
  * Triggered for every byte decoded.
@@ -56,17 +58,18 @@ ISR(TIMER1_COMPA_vect) {
                 rx_high_gain = ADCW;
                 break;
             case sizeof(message_t)+1:
+                rx_leadingbyte = 1;
+                rx_busy = 0;
+
                 if (rx_msg.crc == message_crc(&rx_msg)) {
                     if (rx_msg.type != NORMAL) {
-                        process_specialmessage(rx_msg.type);
+                        process_specialmessage(&rx_msg);
                     } else {
                         RB_back(rxbuffer) = rx_msg;
                         RB_pushback(rxbuffer);
                     }
                 }
 
-                rx_leadingbyte = 1;
-                rx_busy = 0;
 //                txtimer_on();
                 break;
         }
