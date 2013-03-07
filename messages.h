@@ -22,9 +22,9 @@ typedef union {
         uint16_t page_offset;
         uint16_t word1;
         uint16_t word2;
-        uint8_t bootmsg_type;
-        uint32_t crc_bootload;
-    };
+        uint8_t type;
+        uint32_t crc;
+    } bootmsg;
 } message_t;
 
 volatile uint8_t tx_maskon;

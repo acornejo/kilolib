@@ -34,7 +34,6 @@ uint16_t rx_low_gain;              // signal strength of second start bit (with 
 
 volatile enum {
     SLEEPING,
-    BOOTLOAD,
     IDLE,
     BATTERY,
     RUNNING,
@@ -64,7 +63,7 @@ ISR(WDT_vect) {
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
  */
-inline void main_init() {
+void main_init() {
     cli();
     ports_off();
     ports_on();
@@ -83,11 +82,6 @@ inline void main_init() {
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
-#ifdef BOOTLOADER
-    state = BOOTLOAD;
-#else
-    state = IDLE;
-#endif
     OSCCAL = eeprom_read_byte((uint8_t *)0x01);
 	tx_maskon = eeprom_read_byte((uint8_t *)0x90);
     tx_maskoff = ~tx_maskon;
@@ -100,11 +94,11 @@ inline void main_init() {
     rx_bytevalue = 0;
     rx_high_gain = 0;
     rx_low_gain = 0;
+    state = IDLE;
     sei();
 }
 
 void main_loop() {
-    main_init();
     while (1) {
         switch(state) {
             case SLEEPING:
@@ -134,12 +128,6 @@ void main_loop() {
                         _delay_ms(1);
                     }
                 }
-                break;
-            case BOOTLOAD:
-                set_color(3,0,0);
-                _delay_ms(1);
-                set_color(0,0,0);
-                _delay_ms(1);
                 break;
             case IDLE:
                 set_color(0,3,0);
@@ -173,7 +161,12 @@ void main_loop() {
 }
 
 #ifndef BOOTLOADER
-void process_specialmessage(message_t *msg) {
+void process_message(message_t *msg) {
+    if (msg->type == NORMAL) {
+        RB_back(rxbuffer) = *msg;
+        RB_pushback(rxbuffer);
+        return;
+    }
     set_color(0,0,0);
     motors_off();
     txtimer_off();
@@ -212,8 +205,7 @@ int get_ambientlight() {
 	if (!rx_busy) {
 		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
 		cli();                         // disable interrupts
-        // select ADC source
-		ADMUX=7;
+		ADMUX=7;                       // select ADC source
         // enable ADC, set prescalar
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
 		ADCSRA |= (1<<ADSC);           // start AD conversio:
@@ -230,8 +222,7 @@ int get_voltage() {
 	if (!rx_busy) {
 		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
 		cli();                         // disable interrupts
-        // select ADC source
-		ADMUX=6;
+		ADMUX=6;                       // select ADC source
         // enable ADC, set prescalar
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
 		ADCSRA |= (1<<ADSC);           // start AD conversion

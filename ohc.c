@@ -1,3 +1,9 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include <avr/pgmspace.h>
+#include "messages.h"
+
 #define ir_port PORTD
 #define ir_mask (1<<3)
 #define blue_port PORTD
@@ -5,18 +11,7 @@
 #define green_port PORTB
 #define green_mask (1<<1)
 
-#define F_CPU 8000000L
-
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
-#include <avr/pgmspace.h>
-#include <avr/eeprom.h>
-#include "messages.h"
-
 #define BAUDRATE 19200
-
-#define NOP asm volatile("nop\n\t")
 
 int i;
 uint8_t leds_toggle = 0;
@@ -82,12 +77,12 @@ int main() {
                 uint8_t page = 0;
                 while (!ReceivedByte) {
                     msg.type = BOOTLOAD_MSG;
-                    msg.page_address = page;
+                    msg.bootmsg.page_address = page;
                     for (i=0; i<SPM_PAGESIZE; i+=4) {
-                        msg.page_offset = i;
-                        msg.word1 = pgm_read_word(page*SPM_PAGESIZE+i);
-                        msg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
-                        msg.crc = message_crc(&msg);
+                        msg.bootmsg.page_offset = i;
+                        msg.bootmsg.word1 = pgm_read_word(page*SPM_PAGESIZE+i);
+                        msg.bootmsg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
+                        msg.bootmsg.crc = message_crc(&msg);
                         message_send(&msg);
                     }
                     green_port |= green_mask;

@@ -11,6 +11,7 @@ uint8_t txbuffer_size();
 void rxbuffer_pop(message_t *);
 uint8_t rxbuffer_size();
 
+void main_init();
 void main_loop();
-void process_specialmessage(message_t *);
+void process_message(message_t *);
 extern void program_loop();

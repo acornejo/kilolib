@@ -61,14 +61,8 @@ ISR(TIMER1_COMPA_vect) {
                 rx_leadingbyte = 1;
                 rx_busy = 0;
 
-                if (rx_msg.crc == message_crc(&rx_msg)) {
-                    if (rx_msg.type != NORMAL) {
-                        process_specialmessage(&rx_msg);
-                    } else {
-                        RB_back(rxbuffer) = rx_msg;
-                        RB_pushback(rxbuffer);
-                    }
-                }
+                if (rx_msg.crc == message_crc(&rx_msg))
+                    process_message(&rx_msg);
 
 //                txtimer_on();
                 break;

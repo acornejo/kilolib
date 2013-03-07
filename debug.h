@@ -47,9 +47,8 @@ inline void debug_setup() {
 
 #else
 
-inline void debug_setup() {}
-
-inline int printf(const char *fmt, ...) {return 0;}
+#define debug_setup()
+#define printf(...)
 
 #endif//DEBUG
 
