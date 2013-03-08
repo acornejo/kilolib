@@ -82,14 +82,9 @@ uint8_t message_send(message_t *msg) {
     irsend_one();
     __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles);
 
-    /* Check for collisions. 11 cycles per iteration.
-     * delay of 8 bits == 269*8/11 = 196 */
-    for(k=0;k<196;k++) {
-        if((ACSR & (1<<ACO))>0) {
-            IR_DDR = ddr;
-            SREG = sreg;
-            return 0;
-        }
+    /* Check for collisions. 8 cycles per iteration.
+     * delay of 8 bits == 269*8/8 = 269 */
+    for(k=0;k<rx_bitcycles;k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
             SREG = sreg;
