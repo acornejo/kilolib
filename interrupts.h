@@ -9,7 +9,7 @@ static const uint16_t rx_bitcenter = rx_bitcycles+rx_bitcycles/2;
  */
 ISR(TIMER0_COMPA_vect) {
 	tx_clock += tx_increment;
-    tx_increment = 255;
+    tx_increment = 0xFF;
 	OCR0A = tx_increment;
 
 	if(!rx_busy && tx_clock>tx_period && !RB_empty(txbuffer)) {
@@ -18,7 +18,7 @@ ISR(TIMER0_COMPA_vect) {
             RB_popfront(txbuffer);
             tx_clock = 0;
         } else {
-            tx_increment = rand()%255;
+            tx_increment = rand()&0xFF;
             OCR0A = tx_increment;
         }
     }
