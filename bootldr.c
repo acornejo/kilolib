@@ -27,7 +27,7 @@ void process_message(message_t *msg) {
         page_buffer[msg->bootmsg.page_offset] = msg->bootmsg.word1;
         page_buffer[msg->bootmsg.page_offset+1] = msg->bootmsg.word2;
         page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
-        page_byte_count += 4;
+        page_byte_count += 6;
         if (page_byte_count == SPM_PAGESIZE && !BF_get(page_table, page_address)) {
             set_color(0,3,0);
             int i,j;
