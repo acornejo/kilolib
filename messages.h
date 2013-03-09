@@ -9,10 +9,6 @@
 typedef union {
     uint8_t rawdata[12];
     struct {
-        uint8_t payload[10];
-        uint16_t crc_payload;
-    };
-    struct {
         uint8_t data[9];
         uint8_t type;
         uint16_t crc;

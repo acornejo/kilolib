@@ -67,14 +67,15 @@ void kilo_init() {
     txtimer_setup();
     motors_setup();
     rxtimer_setup();
+    DDRD |= (1<<1);
 
-	//initalize analog comparator
+	// initalize analog comparator
 	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
 	DIDR1 = 3;
 
-	//initalize adc
-	ADMUX = 0;
-	ADCSRA = (1<<ADEN)|(1<<ADSC)|(1<<ADPS1)|(1<<ADPS0); //enable a/d, have it trigger converstion start on a compairitor interrrupt.
+	// initalize adc
+    adc_setup();
+    adc_trigger_setlow();          // set AD to measure low gain
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
@@ -210,6 +211,7 @@ int get_ambientlight() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
 		ADCSRA |= (1<<ADSC);           // start AD conversio:
 		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
+        adc_trigger_setlow();          // set AD to measure low gain
 		sei();                         // reenable interrupts
 
 		return ADCW;
@@ -227,6 +229,7 @@ int get_voltage() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
 		ADCSRA |= (1<<ADSC);           // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
+        adc_trigger_setlow();          // set AD to measure low gain
 		sei();                         // reenable interrupts
 
         return ADCW*19/32+2; // (.0059*(double)ADCW+.0156)*100.0;

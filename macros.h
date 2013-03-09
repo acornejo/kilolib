@@ -4,6 +4,26 @@
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
 #define is_charging()       (PIND&(1<<0)) != 0
 
+#define adc_setup() {\
+    ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);\
+    ADCSRA |= (1<<ADSC);\
+    while ((ADCSRA&(1<<ADSC))==1);\
+}
+
+#define adc_trigger_setlow() {\
+    ADMUX = 1;\
+    ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);\
+    ADCSRB = (1<<ADTS0);\
+}
+
+#define adc_trigger_sethigh() {\
+    ADMUX = 0;\
+    ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);\
+    ADCSRB = (1<<ADTS0);\
+}
+
+#define adc_trigger_stop() ADCSRA &= ~(1<<ADATE)
+
 #define ports_off() {\
     DDRB = 0;\
     DDRC = 0;\

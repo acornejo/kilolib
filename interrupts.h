@@ -1,8 +1,11 @@
 #include <stdlib.h> // for rand()
 
-static const uint16_t rx_bitcenter = rx_bitcycles+rx_bitcycles/2;
+// clock cycles between pulse and interrupt trigger (measured in oscilloscope to be 4.2us)
+#define rx_bitdelay  34
+#define rx_bitcenter (rx_bitcycles+rx_bitcycles/2)
+#define rx_bytetimer (8*rx_bitcycles+rx_bitcycles/2-rx_bitdelay)
 
-#ifndef BOOTLOADER
+#ifndef BOOTLOADER // not required in bootloader
 /**
  * Timer0 interrupt.
  * Used to send messages every tx_period ticks.
@@ -30,11 +33,15 @@ ISR(TIMER0_COMPA_vect) {
  * Triggered for every byte decoded.
  */
 ISR(TIMER1_COMPA_vect) {
+    rxtimer_off();
+    rx_leadingbit = 1;
+
     if (rx_leadingbyte) {
         if (rx_bytevalue == 0) {      /* Leading byte received. */
             rx_leadingbyte = 0;
             rx_byteindex = 0;
         } else {                      /* Collision occurred. */
+            adc_trigger_setlow();
             rx_leadingbyte = 1;
             rx_busy = 0;
 //            txtimer_on();
@@ -44,32 +51,24 @@ ISR(TIMER1_COMPA_vect) {
         rx_byteindex++;
         switch(rx_byteindex) {
             case 1:
-                ADMUX = 1;
-                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);
-                ADCSRB = (1<<ADTS0);
+                rx_low_gain = ADCW;
+                adc_trigger_sethigh();
                 break;
             case 2:
-                rx_low_gain = ADCW;
-                ADMUX = 0;
-                ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);
-                ADCSRB = (1<<ADTS0);
-                break;
-            case 3:
                 rx_high_gain = ADCW;
+                adc_trigger_setlow();
                 break;
             case sizeof(message_t)+1:
                 rx_leadingbyte = 1;
                 rx_busy = 0;
+//                txtimer_on();
 
                 if (rx_msg.crc == message_crc(&rx_msg))
                     process_message(&rx_msg);
 
-//                txtimer_on();
                 break;
         }
     }
-    rxtimer_off();
-    rx_leadingbit = 1;
 }
 
 /**
@@ -77,12 +76,13 @@ ISR(TIMER1_COMPA_vect) {
  * Triggerred for incoming IR pulses (1 bits).
  */
 ISR(ANALOG_COMP_vect) {
+    PORTD |= (1<<1);
 	uint16_t timer = TCNT1;
 
 	if(rx_leadingbit) {
-        OCR1A = 8*rx_bitcycles+rx_bitcycles/3; // set timeout for end of byte
-        rxtimer_on();                          // enable end of byte timer
-		ADCSRA &= ~(1<<ADATE);                 // disable ADC auto trigger conversions
+        OCR1A = rx_bytetimer;    // set timeout for end of byte
+        rxtimer_on();            // enable end of byte timer
+        adc_trigger_stop();
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
 	} else {
@@ -115,4 +115,5 @@ ISR(ANALOG_COMP_vect) {
 
     txtimer_off();
     rx_busy = 1;
+    PORTD &= ~(1<<1);
 }

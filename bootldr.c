@@ -1,15 +1,17 @@
 #include "kilolib.h"
 #include "bitfield.h"
-#include "debug.h"
 #include <avr/io.h>
 #include <stdio.h>
 #include <avr/boot.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
+/* #define DEBUG */
+/* #include "debug.h" */
 
 uint8_t  page_count;
 uint8_t  page_address;
 uint16_t page_byte_count;
-uint16_t page_buffer[SPM_PAGESIZE/2];
+uint16_t page_buffer[SPM_PAGESIZE/2+2];
 BF_create(page_table, 220);
 
 inline void goto_program() {
@@ -28,7 +30,7 @@ void process_message(message_t *msg) {
         page_buffer[msg->bootmsg.page_offset+1] = msg->bootmsg.word2;
         page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
         page_byte_count += 6;
-        if (page_byte_count == SPM_PAGESIZE && !BF_get(page_table, page_address)) {
+        if (page_byte_count >= SPM_PAGESIZE && !BF_get(page_table, page_address)) {
             set_color(0,3,0);
             int i,j;
             eeprom_busy_wait ();
@@ -56,14 +58,14 @@ void process_message(message_t *msg) {
     } else {
         if (page_count == 0)
             goto_program();
-        else
-        {
-            uint8_t i;
-            for (i=0; i<220; i++) {
-                debug_putchar(i,0);
-                debug_putchar(BF_get(page_table,i) ? 1 : 0,0);
-            }
-        }
+        /* else */
+        /* { */
+        /*     uint8_t i; */
+        /*     for (i=0; i<220; i++) { */
+        /*         debug_putchar(i,0); */
+        /*         debug_putchar(BF_get(page_table,i) ? 1 : 0,0); */
+        /*     } */
+        /* } */
     }
 }
 
@@ -77,19 +79,19 @@ int main() {
     sei();
     // initialize hardware
     kilo_init();
-    debug_init();
+    /* debug_init(); */
     // initalize variables
     BF_init(page_table);
     page_count = 0;
     page_address = 0;
     page_byte_count = 0;
 
+    // flash blue led
     while(1) {
         set_color(0,0,3);
         _delay_ms(200);
         set_color(0,0,0);
         _delay_ms(200);
     }
-
     return 0;
 }

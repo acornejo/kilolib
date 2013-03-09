@@ -11,7 +11,7 @@
 #define green_port PORTB
 #define green_mask (1<<1)
 
-#define BAUDRATE 19200
+#define BAUD 19200
 
 int i,j;
 uint8_t page;
@@ -34,9 +34,9 @@ int main() {
 	MCUCR = (1<<IVSEL);
 
 	cli();
+    UBRR0 = ((F_CPU/(BAUD*16UL))-1);            // Set baud rate
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
-    UBRR0 = ((F_CPU/(BAUDRATE*16UL))-1);            // Set baud rate
 	sei();
 
     tx_maskon = ir_mask;
@@ -53,7 +53,12 @@ int main() {
     }
 
     for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = 0;
+        msg.rawdata[i] = i;
+
+    while(1) {
+        message_send(&msg);
+        _delay_ms(20);
+    }
 
 	while(1) {
 		if(ReceivedByte) {
@@ -71,7 +76,7 @@ int main() {
                     green_port &= ~green_mask;
 					_delay_ms(10);
 				}
-				_delay_ms(8000);*/
+				_delay_ms(1000);*/
 
 				// send bootload pages until uart says to stop
                 page = 0;
@@ -84,7 +89,7 @@ int main() {
                         msg.bootmsg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
                         msg.bootmsg.word3 = pgm_read_word(page*SPM_PAGESIZE+i+4);
                         msg.bootmsg.crc = message_crc(&msg);
-                        for (j=0; j<5; j++)
+                        for (j=0; j<3; j++)
                             message_send(&msg);
                     }
                     green_port |= green_mask;
@@ -196,7 +201,6 @@ int main() {
             }
 		}
 	}
-
     return 0;
 }
 

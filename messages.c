@@ -62,12 +62,13 @@
 
 uint16_t message_crc(message_t *msg) {
     uint8_t i;
-    uint16_t crc = 0;
-    for (i = 0; i<sizeof(msg->payload)/sizeof(msg->payload[0]); i++)
-        crc = _crc_ccitt_update(crc, msg->payload[i]);
+    uint16_t crc = 0xFFFF;
+    for (i = 0; i<sizeof(message_t)-sizeof(msg->crc); i++)
+        crc = _crc_ccitt_update(crc, msg->rawdata[i]);
     return crc;
 }
 
+#ifndef BOOTLOADER // not required in bootloader
 uint8_t message_send(message_t *msg) {
     uint16_t k;
     uint8_t byte_idx;
@@ -108,8 +109,12 @@ uint8_t message_send(message_t *msg) {
         }
     }
 
+    /* Leave 2 bit spacing */
+    __builtin_avr_delay_cycles(rx_bitcycles*2);
+
     ACSR |= (1<<ACI);
     IR_DDR = ddr;
     SREG = sreg;
     return 1;
 }
+#endif
