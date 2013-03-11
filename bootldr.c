@@ -1,7 +1,6 @@
 #include "kilolib.h"
 #include "bitfield.h"
 #include <avr/io.h>
-#include <stdio.h>
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>

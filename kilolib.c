@@ -97,6 +97,7 @@ void kilo_init() {
 
 #ifndef BOOTLOADER
 void kilo_loop() {
+    int i;
     while (1) {
         switch(state) {
             case SLEEPING:
@@ -115,7 +116,6 @@ void kilo_loop() {
                 ports_on();
                 adc_on();
 
-                int i;
                 for(i=0;i<10;i++) {
                     if (rx_busy) {
                         set_color(3,0,0);
@@ -204,15 +204,14 @@ void kilo_loop() {}
 
 int get_ambientlight() {
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
-		cli();                         // disable interrupts
-		ADMUX=7;                       // select ADC source
-        // enable ADC, set prescalar
-		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
-		ADCSRA |= (1<<ADSC);           // start AD conversio:
-		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
-        adc_trigger_setlow();          // set AD to measure low gain
-		sei();                         // reenable interrupts
+		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
+		cli();                                    // disable interrupts
+		ADMUX = 7;                                // select ADC source
+		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
+		ADCSRA |= (1<<ADSC);                      // start AD conversion
+		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+		sei();                                    // reenable interrupts
 
 		return ADCW;
 	}
@@ -222,15 +221,14 @@ int get_ambientlight() {
 
 int get_voltage() {
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC))==1); // wait until previous AD conversion is done
-		cli();                         // disable interrupts
-		ADMUX=6;                       // select ADC source
-        // enable ADC, set prescalar
-		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);
-		ADCSRA |= (1<<ADSC);           // start AD conversion
-		while ((ADCSRA&(1<<ADSC))==1); // wait until AD conversion is done
-        adc_trigger_setlow();          // set AD to measure low gain
-		sei();                         // reenable interrupts
+		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
+		cli();                                    // disable interrupts
+		ADMUX = 6;                                // select ADC source
+		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
+		ADCSRA |= (1<<ADSC);                      // start AD conversion
+		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+		sei();                                    // reenable interrupts
 
         return ADCW*19/32+2; // (.0059*(double)ADCW+.0156)*100.0;
 	}

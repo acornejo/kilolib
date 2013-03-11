@@ -10,7 +10,7 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
-PFLAGS = -P usb -c avrispmkII-U
+PFLAGS = -P usb -c avrispmkII -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
