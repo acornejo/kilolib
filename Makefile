@@ -10,7 +10,7 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
-PFLAGS = -P usb -c avrispmkII -p m328 -U
+PFLAGS = -P usb -c avrispmkII-U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
@@ -56,10 +56,10 @@ build/kilo-merged.hex: build/program.hex build/bootldr.hex
 	cat build/bootldr.hex >> $@
 
 program-ohc: build/ohc-merged.hex
-	$(AVRUP) $(PFLAGS) "flash:w:$<:i"
+	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
 
 program-kilo: build/kilo-merged.hex
-	$(AVRUP) -F $(PFLAGS) "flash:w:$<:i"
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
 
 clean:
 	rm -fR build

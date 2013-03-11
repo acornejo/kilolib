@@ -1,5 +1,5 @@
-#define txtimer_on()        TCCR0B=0x05
-#define txtimer_off()       TCCR0B=0
+#define tx_timer_on()        TCCR0B=0x05
+#define tx_timer_off()       TCCR0B=0
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
 #define is_charging()       (PIND&(1<<0)) != 0
@@ -38,7 +38,7 @@
     PORTD |= (1<<2);\
 }
 
-#define txtimer_setup() {\
+#define tx_timer_setup() {\
 	TCCR0A = 0;\
 	TCCR0B = 0;\
     OCR0A = 0xFF;\
@@ -68,19 +68,19 @@
     OCR2A = 0x00;\
 }
 
-#define rxtimer_setup() {\
+#define rx_timer_setup() {\
     TCCR1A = 0;\
     TCCR1B = 0;\
     OCR1A = 0;\
     TIMSK1 = (1<<OCIE1A); /* Interrupt enable on match output compare register A */\
 }
 
-#define rxtimer_on() {\
+#define rx_timer_on() {\
     TCNT1 = 0; /* Reset count */ \
     TCCR1B = 1; /* set prescalar to 1 */\
 }
 
-#define rxtimer_off() {\
+#define rx_timer_off() {\
     TCCR1B = 0; /* set prescalar to 0 (disabled). */ \
     TCNT1 = 0; /* Reset count */ \
 }

@@ -14,10 +14,26 @@ uint16_t page_byte_count;
 uint16_t page_buffer[SPM_PAGESIZE/2+2];
 BF_create(page_table, 220);
 
-inline void goto_program() {
+void goto_program() {
     MCUCR = (1<<IVCE);
     MCUCR = 0;
     asm volatile ("jmp 0x0000");
+}
+
+void write_program_page() {
+    int i,j;
+    eeprom_busy_wait ();
+
+    boot_page_erase(page_address*SPM_PAGESIZE);
+    boot_spm_busy_wait();
+
+    for (i=0, j=0; i<SPM_PAGESIZE; i+=2, j++)
+        boot_page_fill(page_address*SPM_PAGESIZE+i, page_buffer[j]);
+
+    boot_page_write(page_address*SPM_PAGESIZE);
+    boot_spm_busy_wait();
+
+    boot_rww_enable ();
 }
 
 void process_message(message_t *msg) {
@@ -32,20 +48,7 @@ void process_message(message_t *msg) {
         page_byte_count += 6;
         if (page_byte_count >= SPM_PAGESIZE && !BF_get(page_table, page_address)) {
             set_color(0,3,0);
-            int i,j;
-            eeprom_busy_wait ();
-
-            boot_page_erase(page_address*SPM_PAGESIZE);
-            boot_spm_busy_wait();
-
-            for (i=0, j=0; i<SPM_PAGESIZE; i+=2, j++)
-                boot_page_fill(page_address*SPM_PAGESIZE+i, page_buffer[j]);
-
-            boot_page_write(page_address*SPM_PAGESIZE);
-            boot_spm_busy_wait();
-
-            boot_rww_enable ();
-
+            write_program_page();
             BF_set(page_table, page_address);
             page_count++;
             if (page_count == 220)

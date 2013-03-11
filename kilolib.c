@@ -64,9 +64,9 @@ void kilo_init() {
     cli();
     ports_off();
     ports_on();
-    txtimer_setup();
+    tx_timer_setup();
+    rx_timer_setup();
     motors_setup();
-    rxtimer_setup();
     DDRD |= (1<<1);
 
 	// initalize analog comparator

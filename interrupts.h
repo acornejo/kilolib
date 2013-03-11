@@ -33,7 +33,7 @@ ISR(TIMER0_COMPA_vect) {
  * Triggered for every byte decoded.
  */
 ISR(TIMER1_COMPA_vect) {
-    rxtimer_off();
+    rx_timer_off();
     rx_leadingbit = 1;
 
     if (rx_leadingbyte) {
@@ -44,7 +44,7 @@ ISR(TIMER1_COMPA_vect) {
             adc_trigger_setlow();
             rx_leadingbyte = 1;
             rx_busy = 0;
-//            txtimer_on();
+//            tx_timer_on();
         }
     } else {
         rx_msg.rawdata[rx_byteindex] = rx_bytevalue;
@@ -61,7 +61,7 @@ ISR(TIMER1_COMPA_vect) {
             case sizeof(message_t)+1:
                 rx_leadingbyte = 1;
                 rx_busy = 0;
-//                txtimer_on();
+//                tx_timer_on();
 
                 if (rx_msg.crc == message_crc(&rx_msg))
                     process_message(&rx_msg);
@@ -81,7 +81,7 @@ ISR(ANALOG_COMP_vect) {
 
 	if(rx_leadingbit) {
         OCR1A = rx_bytetimer;    // set timeout for end of byte
-        rxtimer_on();            // enable end of byte timer
+        rx_timer_on();           // enable end of byte timer
         adc_trigger_stop();
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
@@ -113,7 +113,7 @@ ISR(ANALOG_COMP_vect) {
 		}
 	}
 
-    txtimer_off();
+    tx_timer_off();
     rx_busy = 1;
     PORTD &= ~(1<<1);
 }
