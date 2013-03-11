@@ -91,9 +91,9 @@ int main() {
     // flash blue led
     while(1) {
         set_color(0,0,3);
-        _delay_ms(200);
+        _delay_ms(5);
         set_color(0,0,0);
-        _delay_ms(200);
+        _delay_ms(1000);
     }
     return 0;
 }
