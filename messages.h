@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 
-#define tx_period 50000  // number of timer cycles between consecutive messages
-#define rx_bitcycles 269 // number of clock cycles between consecutive bits
-
 typedef union {
     uint8_t rawdata[12];
     struct {
@@ -42,7 +39,13 @@ typedef enum {
     RUN,
     RESET,
     BOOTLOAD_MSG,
-
 } message_type_t;
+
+/* Number of clock cycles per bit. */
+#define rx_bitcycles 256
+/* Number of clock cycles for an entire message. */
+#define rx_msgcycles (10*rx_bitcycles*(sizeof(message_t)+1))
+/* Number of timer cycles between consecutive messages. */
+#define tx_period 50000
 
 #endif//__MESSAGES_H__

@@ -53,12 +53,12 @@ int main() {
     }
 
     for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = i;
+        msg.rawdata[i] = 0;
 
-    while(1) {
-        message_send(&msg);
-        _delay_ms(20);
-    }
+    /* while(1) { */
+    /*     message_send(&msg); */
+    /*     _delay_ms(20); */
+    /* } */
 
 	while(1) {
 		if(ReceivedByte) {
@@ -89,8 +89,7 @@ int main() {
                         msg.bootmsg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
                         msg.bootmsg.word3 = pgm_read_word(page*SPM_PAGESIZE+i+4);
                         msg.bootmsg.crc = message_crc(&msg);
-                        for (j=0; j<3; j++)
-                            message_send(&msg);
+                        message_send(&msg);
                     }
                     green_port |= green_mask;
                     _delay_ms(5);

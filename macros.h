@@ -71,7 +71,7 @@
 #define rx_timer_setup() {\
     TCCR1A = 0;\
     TCCR1B = 0;\
-    OCR1A = 0;\
+    OCR1A = rx_msgcycles;\
     TIMSK1 = (1<<OCIE1A); /* Interrupt enable on match output compare register A */\
 }
 

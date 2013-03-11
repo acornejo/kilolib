@@ -83,9 +83,9 @@ uint8_t message_send(message_t *msg) {
     irsend_one();
     __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles);
 
-    /* Check for collisions. 8 cycles per iteration.
-     * delay of 8 bits == rx_bitcycles * 8bits/ 8 cycles pi = * rx_bitcycles. */
-    for(k=0;k<rx_bitcycles+10;k++) {
+    /* Check for collisions for the 8 data bits (8 cycles per iteration).
+     * delay for 8 bits == 8 * rx_bitcycles/ cycles per iteration = rx_bitcycles. */
+    for(k=0; k<rx_bitcycles; k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
             SREG = sreg;
@@ -93,24 +93,25 @@ uint8_t message_send(message_t *msg) {
         }
     }
 
+    /* Send stop bit. */
+    irsend_one();
+    __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles);
+
     /* Loop over each byte in the message */
     for(byte_idx=0; byte_idx<sizeof(message_t); byte_idx++) {
-        /* Add start bit to byte. */
-        int16_t bitmask = 0x01;
-        int16_t byteval = msg->rawdata[byte_idx]<<1 | 1;
+        /* 1 Start bit, 8 data bits, 1 stop bit. */
+        int16_t byteval = msg->rawdata[byte_idx]<<1 | (1<<0) | (1<<9);
+        int16_t bitmask = (1<<0);
         /* Transmit each bit. Loop overhead is 12 cycles per iteration. */
-        while(bitmask <= 0x100) {
+        while(bitmask <= (1<<9)) {
             if (byteval & bitmask)
                 irsend_one();
             else
                 irsend_zero();
-            bitmask <<=1;
+            bitmask <<= 1;
             __builtin_avr_delay_cycles(rx_bitcycles-irsend_cycles-12);
         }
     }
-
-    /* Leave 2 bit spacing */
-    __builtin_avr_delay_cycles(rx_bitcycles*2);
 
     ACSR |= (1<<ACI);
     IR_DDR = ddr;
