@@ -166,7 +166,7 @@ void process_message(message_t *msg) {
     }
     set_color(0,0,0);
     motors_off();
-    txtimer_off();
+    tx_timer_off();
     switch (msg->type) {
         case BOOT:
             bootload();
@@ -186,7 +186,7 @@ void process_message(message_t *msg) {
             break;
         case RUN:
             motors_on();
-            txtimer_on();
+            tx_timer_on();
             state = RUNNING;
             break;
         case RESET:
