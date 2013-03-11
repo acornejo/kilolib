@@ -129,9 +129,9 @@ void kilo_loop() {
                 break;
             case IDLE:
                 set_color(0,3,0);
-                _delay_ms(200);
+                _delay_ms(5);
                 set_color(0,0,0);
-                _delay_ms(200);
+                _delay_ms(500);
                 break;
             case BATTERY:
 				if(get_voltage()>400)
@@ -148,7 +148,7 @@ void kilo_loop() {
 					set_color(1,0,0);
 					_delay_ms(2);
 					set_color(0,0,0);
-					_delay_ms(200);
+					_delay_ms(500);
                 }
                 break;
             case RUNNING:
