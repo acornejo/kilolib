@@ -22,10 +22,10 @@ volatile	int ReceivedByte;
 
 int main() {
     // Set port outputs
-    DDRB = (1<<1)|(1<<2);
-    DDRD = (1<<2)|(1<<3);
+    DDRB = (1<<1)|(1<<2);         // enable green led & blue led
+    DDRD = (1<<2)|(1<<3);         // enable ir led & blue led
     // Turn IR led off
-    PORTD &= ~(1<<3);
+    ir_port &= ~ir_mask;
     // turn off analog comparator (to avoid detecting collisions)
     ACSR |= (1<<ACD);
 
@@ -67,7 +67,8 @@ int main() {
 
             switch(message_received) {
             case 'a':
-/*                msg.type = BOOT;
+                // send bootload message again
+                msg.type = BOOT;
                 msg.crc = message_crc(&msg);
 				for(i=0;i<100;i++) {
                     message_send(&msg);
@@ -76,7 +77,7 @@ int main() {
                     green_port &= ~green_mask;
 					_delay_ms(10);
 				}
-				_delay_ms(1000);*/
+				_delay_ms(1000);
 
 				// send bootload pages until uart says to stop
                 page = 0;
@@ -92,9 +93,9 @@ int main() {
                         message_send(&msg);
                     }
                     green_port |= green_mask;
-                    _delay_ms(5);
+                    _delay_ms(10);
                     green_port &= ~green_mask;
-                    _delay_ms(5);
+                    _delay_ms(10);
                     page++;
                     if (page >= 220)
                         page = 0;
