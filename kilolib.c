@@ -9,6 +9,8 @@
 #include "ringbuffer.h"
 #include "macros.h"
 
+#define EEPROM_OSCCAL 0x01
+#define EEPROM_TXMASK 0x90
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
@@ -29,13 +31,13 @@ uint8_t rx_bytevalue;              // value of the current byte being decoded
 uint16_t rx_high_gain;             // signal strength of first start bit  (with high gain resistor)
 uint16_t rx_low_gain;              // signal strength of second start bit (with low gain resistor)
 
-volatile enum {
+static volatile enum {
     SLEEPING,
     IDLE,
     BATTERY,
     RUNNING,
     CHARGING,
-} state;
+} kilo_state;
 
 
 #ifndef BOOTLOADER
@@ -78,8 +80,8 @@ void kilo_init() {
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
-    OSCCAL = eeprom_read_byte((uint8_t *)0x01);
-	tx_maskon = eeprom_read_byte((uint8_t *)0x90);
+    OSCCAL = eeprom_read_byte((uint8_t *)EEPROM_OSCCAL);
+	tx_maskon = eeprom_read_byte((uint8_t *)EEPROM_TXMASK);
     tx_maskoff = ~tx_maskon;
     tx_clock = 0;
     tx_increment = 255;
@@ -90,7 +92,8 @@ void kilo_init() {
     rx_bytevalue = 0;
     rx_high_gain = 0;
     rx_low_gain = 0;
-    state = IDLE;
+    kilo_clock = 0;
+    kilo_state = IDLE;
     sei();
 }
 
@@ -98,7 +101,7 @@ void kilo_init() {
 void kilo_loop() {
     int i, voltage;
     while (1) {
-        switch(state) {
+        switch(kilo_state) {
             case SLEEPING:
                 cli();
                 adc_off();
@@ -175,22 +178,22 @@ void process_message(message_t *msg) {
             bootload();
             break;
         case SLEEP:
-            state = SLEEPING;
+            kilo_state = SLEEPING;
             break;
         case PAUSE:
         case WAKEUP:
-            state = IDLE;
+            kilo_state = IDLE;
             break;
         case CHARGE:
-            state = CHARGING;
+            kilo_state = CHARGING;
             break;
         case VOLTAGE:
-            state = BATTERY;
+            kilo_state = BATTERY;
             break;
         case RUN:
             motors_on();
             tx_timer_on();
-            state = RUNNING;
+            kilo_state = RUNNING;
             break;
         case RESET:
             reset();

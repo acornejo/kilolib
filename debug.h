@@ -50,6 +50,7 @@ static int debug_putchar(char c, FILE *stream) {
 static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE);
 
 inline void debug_init() {
+    cli();
 	DDRD |= (1<<1);                                 // Set UART TxD pin as output
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<TXEN0);                           // Enable transmission
@@ -57,6 +58,7 @@ inline void debug_init() {
     UBRR0 = ((F_CPU/(BAUD*16UL))-1);
     debug_init_extra();
     stdout = &debug_stdout;
+    sei();
     // printf("\n");
     // printf("+-----------------+\n");
     // printf("| Kilobot Started |\n");

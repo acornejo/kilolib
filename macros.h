@@ -1,5 +1,5 @@
-#define tx_timer_on()        TCCR0B=0x05
-#define tx_timer_off()       TCCR0B=0
+#define tx_timer_on()       TIMSK0 &= ~(1<<OCIE0A)
+#define tx_timer_off()      TIMSK0 |= (1<<OCIE0A)
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
 #define is_charging()       ((PIND&(1<<0)) == 0)
@@ -40,16 +40,16 @@
 
 #define tx_timer_setup() {\
 	TCCR0A = 0;\
-	TCCR0B = 0;\
     OCR0A = 0xFF;\
-	TIMSK0 = (1<<OCIE0A); /* Interrupt enable on match output compare register A */\
+	TCCR0B = (1<<CS02)|(1<<CS00);\
+    TIMSK0 = 0;\
 }
 
 #define motors_setup() {\
     DDRD &= ~(1<<3);\
     DDRB &= ~(1<<3);\
-    TCCR2A |= (1<<COM2A1)|(1<<COM2B1)|(1<<WGM20);\
-    TCCR2B |= (1<<CS01);\
+    TCCR2A = (1<<COM2A1)|(1<<COM2B1)|(1<<WGM20);\
+    TCCR2B = (1<<CS01);\
     OCR2B = 0;\
     OCR2A = 0;\
 }
