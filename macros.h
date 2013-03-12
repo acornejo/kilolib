@@ -2,7 +2,7 @@
 #define tx_timer_off()       TCCR0B=0
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
-#define is_charging()       (PIND&(1<<0)) != 0
+#define is_charging()       ((PIND&(1<<0)) != 0)
 
 #define adc_setup() {\
     ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);\
@@ -76,11 +76,11 @@
 }
 
 #define rx_timer_on() {\
-    TCNT1 = 0; /* Reset count */ \
-    TCCR1B = 1; /* set prescalar to 1 */\
+    TCNT1 = 0;  /* reset count */ \
+    TCCR1B = 1; /* set prescalar to 1 (enabled). */\
 }
 
 #define rx_timer_off() {\
     TCCR1B = 0; /* set prescalar to 0 (disabled). */ \
-    TCNT1 = 0; /* Reset count */ \
+    TCNT1 = 0;  /* reset count */ \
 }

@@ -48,8 +48,7 @@ ISR(ANALOG_COMP_vect) {
     adc_trigger_stop();
 
 	if(rx_leadingbit) {       // Start bit received.
-                PORTD |= (1<<1);
-        rx_timer_on(); 
+        rx_timer_on();
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
         if (rx_leadingbyte) {
@@ -57,7 +56,7 @@ ISR(ANALOG_COMP_vect) {
             adc_trigger_sethigh();
         }
 	} else {
-        // Stray bit
+        // Stray bit received
         if (timer <= rx_bitcycles/2 || timer >= rx_bitcycles*9+rx_bitcycles/2) {
             /* tx_timer_on(); */
             rx_leadingbit = 1;
@@ -79,7 +78,7 @@ ISR(ANALOG_COMP_vect) {
                         rx_leadingbyte = 1;
                         rx_busy = 0;
                         rx_timer_off();
-                    } else {                 // Leading byte received.
+                    } else {                // Leading byte received.
                         rx_leadingbyte = 0;
                         rx_byteindex = 0;
                     }
@@ -99,5 +98,4 @@ ISR(ANALOG_COMP_vect) {
             }
         }
 	}
-    PORTD &= ~(1<<1);
 }
