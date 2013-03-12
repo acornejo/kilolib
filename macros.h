@@ -2,7 +2,7 @@
 #define tx_timer_off()       TCCR0B=0
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
-#define is_charging()       ((PIND&(1<<0)) != 0)
+#define is_charging()       ((PIND&(1<<0)) == 0)
 
 #define adc_setup() {\
     ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);\

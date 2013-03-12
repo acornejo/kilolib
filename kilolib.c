@@ -96,7 +96,7 @@ void kilo_init() {
 
 #ifndef BOOTLOADER
 void kilo_loop() {
-    int i;
+    int i, voltage;
     while (1) {
         switch(state) {
             case SLEEPING:
@@ -115,6 +115,9 @@ void kilo_loop() {
                 ports_on();
                 adc_on();
 
+                _delay_us(300);
+                rx_busy = 0;
+
                 for(i=0;i<10;i++) {
                     if (rx_busy) {
                         set_color(3,0,0);
@@ -128,26 +131,27 @@ void kilo_loop() {
                 break;
             case IDLE:
                 set_color(0,3,0);
-                _delay_ms(5);
+                _delay_ms(2);
                 set_color(0,0,0);
-                _delay_ms(500);
+                _delay_ms(1000);
                 break;
             case BATTERY:
-				if(get_voltage()>400)
-					set_color(0,7,0);
-				else if(get_voltage()>390)
-					set_color(0,0,7);
-				else if(get_voltage()>350)
-					set_color(7,7,0);
+                voltage = get_voltage();
+				if(voltage > 400)
+					set_color(0,3,0);
+				else if(voltage > 390)
+					set_color(0,0,3);
+				else if(voltage > 350)
+					set_color(3,3,0);
 				else
-					set_color(7,0,0);
+					set_color(3,0,0);
                 break;
             case CHARGING:
                 if (is_charging()) {
 					set_color(1,0,0);
 					_delay_ms(2);
 					set_color(0,0,0);
-					_delay_ms(500);
+					_delay_ms(1000);
                 }
                 break;
             case RUNNING:
@@ -201,7 +205,8 @@ void process_message(message_t *msg) {
 void kilo_loop() {}
 #endif
 
-int get_ambientlight() {
+int16_t get_ambientlight() {
+    int16_t light = -1;
 	if (!rx_busy) {
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
 		cli();                                    // disable interrupts
@@ -209,16 +214,15 @@ int get_ambientlight() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+        light = ADCW;                             // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
-
-		return ADCW;
 	}
-	else
-        return -1;
+    return light;
 }
 
-int get_voltage() {
+int16_t get_voltage() {
+    int16_t voltage=-1;
 	if (!rx_busy) {
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
 		cli();                                    // disable interrupts
@@ -226,16 +230,14 @@ int get_voltage() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+        voltage = ADCW*3/2;                       // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
-
-        return ADCW*19/32+2; // (.0059*(double)ADCW+.0156)*100.0;
 	}
-	else
-        return -1;
+    return voltage;
 }
 
-void set_color(int8_t red, int8_t green, int8_t blue) {
+void set_color(uint8_t red, uint8_t green, uint8_t blue) {
     if (blue&1)
 		DDRC |= (1<<5);
 	else
@@ -267,7 +269,7 @@ void set_color(int8_t red, int8_t green, int8_t blue) {
 		DDRC &= ~(1<<2);
 }
 
-void set_motors(int8_t ccw, int8_t cw) {
+void set_motors(uint8_t ccw, uint8_t cw) {
     OCR2A = ccw;
     OCR2B = cw;
 }

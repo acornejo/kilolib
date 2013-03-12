@@ -36,7 +36,7 @@ void write_program_page() {
 }
 
 void process_message(message_t *msg) {
-    if (msg->type == BOOTLOAD_MSG) {
+    if (msg->type == BOOTLOAD_PAGE) {
         if (page_address != msg->bootmsg.page_address) {
             page_address = msg->bootmsg.page_address;
             page_byte_count = 0;

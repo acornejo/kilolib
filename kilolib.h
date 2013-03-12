@@ -1,9 +1,10 @@
+#include <stdint.h>
 #include "messages.h"
 
-void set_motors(int8_t, int8_t);
-void set_color(int8_t, int8_t, int8_t);
-int get_voltage();
-int get_ambientlight();
+void set_motors(uint8_t, uint8_t);
+void set_color(uint8_t, uint8_t, uint8_t);
+int16_t get_voltage();
+int16_t get_ambientlight();
 
 void process_message(message_t *);
 

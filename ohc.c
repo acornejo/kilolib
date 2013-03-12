@@ -82,7 +82,7 @@ int main() {
 				// send bootload pages until uart says to stop
                 page = 0;
                 while (!ReceivedByte) {
-                    msg.type = BOOTLOAD_MSG;
+                    msg.type = BOOTLOAD_PAGE;
                     msg.bootmsg.page_address = page;
                     for (i=0; i<SPM_PAGESIZE; i+=6) {
                         msg.bootmsg.page_offset = i/2;

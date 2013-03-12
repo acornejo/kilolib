@@ -1,7 +1,8 @@
 #include "kilolib.h"
 #include <avr/eeprom.h>
-/* #define DEBUG */
-/* #include "debug.h" */
+#include "rand.h"
+#define DEBUG
+#include "debug.h"
 
 #define EEPROM_SENSOR_LOW 0x20
 #define EEPROM_SENSOR_HIGH 0x50
@@ -11,6 +12,8 @@ uint16_t sensor_high_data[14];
 uint8_t print_done;
 
 void program_loop() {
+    uint16_t reading = get_ambientlight();
+    printf("%d\n", reading);
    //read low gain sensor calibration data from eeprom, store in sensor_cal_data_low[]
     /* if (!print_done) { */
     /*     print_done = 1; */
@@ -33,7 +36,7 @@ void program_loop() {
 int main() {
     print_done =0;
     kilo_init();
-    /* debug_init(); */
+    debug_init();
     kilo_loop();
     return 0;
 }
