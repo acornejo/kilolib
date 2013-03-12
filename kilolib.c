@@ -67,7 +67,6 @@ void kilo_init() {
     tx_timer_setup();
     rx_timer_setup();
     motors_setup();
-    DDRD |= (1<<1);
 
 	// initalize analog comparator
 	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
