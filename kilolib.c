@@ -92,7 +92,7 @@ void kilo_init() {
     rx_bytevalue = 0;
     rx_high_gain = 0;
     rx_low_gain = 0;
-    kilo_clock = 0;
+    kilo_ticks = 0;
     kilo_state = IDLE;
     sei();
 }
@@ -104,6 +104,7 @@ void kilo_loop() {
         switch(kilo_state) {
             case SLEEPING:
                 cli();
+                acomp_off();
                 adc_off();
                 ports_off();
                 wdt_enable(WDTO_8S);
@@ -115,46 +116,47 @@ void kilo_loop() {
                 sleep_cpu();
                 sleep_disable();
                 sei();
+                rx_busy = 0;
                 ports_on();
                 adc_on();
 
                 _delay_us(300);
-                rx_busy = 0;
+                acomp_on();
 
                 for(i=0;i<10;i++) {
                     if (rx_busy) {
-                        set_color(3,0,0);
+                        set_color(RGB(3,0,0));
                         _delay_ms(100);
                         break;
                     } else {
-                        set_color(3,3,3);
+                        set_color(RGB(3,3,3));
                         _delay_ms(1);
                     }
                 }
                 break;
             case IDLE:
-                set_color(0,3,0);
-                _delay_ms(2);
-                set_color(0,0,0);
-                _delay_ms(1000);
+                set_color(RGB(0,3,0));
+                _delay_ms(1);
+                set_color(RGB(0,0,0));
+                _delay_ms(200);
                 break;
             case BATTERY:
                 voltage = get_voltage();
 				if(voltage > 400)
-					set_color(0,3,0);
+					set_color(RGB(0,3,0));
 				else if(voltage > 390)
-					set_color(0,0,3);
+					set_color(RGB(0,0,3));
 				else if(voltage > 350)
-					set_color(3,3,0);
+					set_color(RGB(3,3,0));
 				else
-					set_color(3,0,0);
+					set_color(RGB(3,0,0));
                 break;
             case CHARGING:
                 if (is_charging()) {
-					set_color(1,0,0);
-					_delay_ms(2);
-					set_color(0,0,0);
-					_delay_ms(1000);
+					set_color(RGB(1,0,0));
+					_delay_ms(1);
+					set_color(RGB(0,0,0));
+					_delay_ms(200);
                 }
                 break;
             case RUNNING:
@@ -170,7 +172,7 @@ void process_message(message_t *msg) {
         RB_pushback(rxbuffer);
         return;
     }
-    set_color(0,0,0);
+    set_color(RGB(0,0,0));
     motors_off();
     tx_timer_off();
     switch (msg->type) {
@@ -240,36 +242,37 @@ int16_t get_voltage() {
     return voltage;
 }
 
-void set_color(uint8_t red, uint8_t green, uint8_t blue) {
-    if (blue&1)
-		DDRC |= (1<<5);
-	else
-		DDRC &= ~(1<<5);
-
-    if (blue&2)
-		DDRC |= (1<<4);
-	else
-		DDRC &= ~(1<<4);
-
-    if (red&1)
+void set_color(uint8_t rgb) {
+    if (rgb&(1<<0))
 		DDRD |= (1<<5);
 	else
 		DDRD &= ~(1<<5);
 
-    if (red&2)
+    if (rgb&(1<<1))
 		DDRD |= (1<<4);
 	else
 		DDRD &= ~(1<<4);
 
-    if (green&1)
+    if (rgb&(1<<2))
 		DDRC |= (1<<3);
 	else
 		DDRC &= ~(1<<3);
 
-    if (green&2)
+    if (rgb&(1<<3))
 		DDRC |= (1<<2);
 	else
 		DDRC &= ~(1<<2);
+
+    if (rgb&(1<<4))
+		DDRC |= (1<<5);
+	else
+		DDRC &= ~(1<<5);
+
+    if (rgb&(1<<5))
+		DDRC |= (1<<4);
+	else
+		DDRC &= ~(1<<4);
+
 }
 
 void set_motors(uint8_t ccw, uint8_t cw) {

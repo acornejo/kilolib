@@ -2,6 +2,8 @@
 #define tx_timer_off()      TIMSK0 |= (1<<OCIE0A)
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
+#define acomp_on()          ACSR |= (1<<ACIE)|(1<<ACI)
+#define acomp_off()         ACSR &= ~(1<<ACIE)
 #define is_charging()       ((PIND&(1<<0)) == 0)
 
 #define adc_setup() {\

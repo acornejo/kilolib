@@ -46,7 +46,7 @@ void process_message(message_t *msg) {
         page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
         page_byte_count += 6;
         if (page_byte_count >= SPM_PAGESIZE && !BF_get(page_table, page_address)) {
-            set_color(0,3,0);
+            set_color(RGB(0,3,0));
             write_program_page();
             BF_set(page_table, page_address);
             page_count++;
@@ -54,7 +54,7 @@ void process_message(message_t *msg) {
                 goto_program();
         }
         else
-            set_color(0,0,1);
+            set_color(RGB(0,0,1));
     } else if (msg->type == BOOT) {
             asm volatile ("jmp 0x7000");
     } else {
@@ -90,9 +90,9 @@ int main() {
 
     // flash blue led
     while(1) {
-        set_color(0,0,3);
+        set_color(RGB(0,0,3));
         _delay_ms(5);
-        set_color(0,0,0);
+        set_color(RGB(0,0,0));
         _delay_ms(1000);
     }
     return 0;

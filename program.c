@@ -5,89 +5,125 @@
 #define DEBUG
 #include "debug.h"
 
-#define lightstep 10
-#define motorstep 2
+#define IDEALPERIOD 5*TICKS_PER_SEC
+#define MAXLIGHT 1000
+#define MINLIGHT 0
+#define LIGHTSTEP 20
+#define MOTORSTEP 5
+
 uint16_t period;
+uint16_t prev_minticks;
 uint16_t prevlight;
 uint16_t curlight;
 uint16_t avglight;
-uint16_t minlight1;
-uint16_t minlight2;
-uint16_t mintime1, mintime2;
+uint16_t minlight;
+uint16_t maxlight;
+uint16_t minticks;
+uint8_t precision;
 uint8_t left, right;
+uint8_t i;
 
 enum {
-    START,
-    START_ROTATE_LEFT,
-    FIND_FIRST_MIN,
-    FIND_SECOND_MIN,
-    ADJUST_SPEED,
+    START_STATE,
+    FIND_THRESHOLD,
+    FIND_START_MIN,
+    FIND_REAL_MIN,
+    END_STATE
 } state;
 
 void program_init() {
-    state = START_ROTATE_LEFT;
-    prevlight = 0;
+    state = START_STATE;
     curlight = 0;
-    minlight1 = 1000;
-    minlight2 = 1000;
+    minlight = MAXLIGHT;
+    maxlight = MINLIGHT;
+    precision = 0;
+    prev_minticks = 0;
     left = 0;
     right = 0;
 }
 
+inline void update_sensors() {
+    prevlight = curlight;
+    curlight = get_ambientlight();
+    avglight = (curlight+prevlight)/2;
+}
+
 void program_loop() {
+    update_sensors();
+
     switch(state) {
-        case START:
-            set_color(1,1,1);
-            _delay_ms(1000);
-            state = START_ROTATE_LEFT;
+        case START_STATE:
+            for (i = 0; i < 10; i++) {
+                set_color(RGB(1,1,0));
+                _delay_ms(100);
+                set_color(RGB(0,0,0));
+                _delay_ms(100);
+                update_sensors();
+            }
+            state = FIND_THRESHOLD;
             break;
-        case START_ROTATE_LEFT:
-            if (prevlight >= curlight-lightstep && prevlight <= curlight+lightstep) {
-                left += motorstep;
-                set_motors(0xFF, 0);
-                _delay_us(500);
-                set_motors(left, right);
-                _delay_ms(600);
+        case FIND_THRESHOLD:
+            if (curlight > prevlight+LIGHTSTEP/2 || curlight < prevlight-LIGHTSTEP/2) {
+                // Ensure we overshoot power. Otherwise we can get stuck
+                // on tiny surface glitches without completing any
+                // turns.
+                left += MOTORSTEP;
+                state = FIND_START_MIN;
             } else {
-                state = FIND_FIRST_MIN;
+                left += MOTORSTEP;
+                set_color(RGB(1,0,0));
+                set_motors(0xFF, 0);
+                _delay_us(1000);
+                set_color(RGB(0,0,0));
+                set_motors(left, 0);
+                _delay_ms(1000);
             }
             break;
-        case FIND_FIRST_MIN:
-            if (curlight < minlight1) {
-                minlight1 = curlight;
-                mintime1 = kilo_clock;
-            } else if (curlight > minlight1+10) {
-                state = FIND_SECOND_MIN;
+        case FIND_START_MIN:
+            set_color(RGB(0,1,0));
+            if (curlight < minlight)
+                minlight = curlight;
+            if (curlight > maxlight)
+                maxlight = curlight;
+            if (curlight > minlight+LIGHTSTEP && curlight < maxlight-LIGHTSTEP) {
+                state = FIND_REAL_MIN;
+                minlight = MAXLIGHT;
             }
             break;
-        case FIND_SECOND_MIN:
-            if (curlight < minlight2) {
-                minlight2 = curlight;
-                mintime2 = kilo_clock;
-            } else if (curlight > minlight2+10) {
-                state = ADJUST_SPEED;
+        case FIND_REAL_MIN:
+            set_color(RGB(0,0,1));
+            if (curlight < minlight) {
+                minlight = curlight;
+                minticks = kilo_ticks;
+            }
+            if (curlight> minlight+LIGHTSTEP) {
+                if (prev_minticks != 0) {
+                    period = prev_minticks - minticks;
+                    if (period > IDEALPERIOD) {
+                        left += MOTORSTEP>>precision;
+                    } else {
+                        left -= MOTORSTEP>>precision;
+                    }
+                    precision++;
+                    if (!(MOTORSTEP>>precision))
+                        state = END_STATE;
+                }
+                prev_minticks = minticks;
+                minlight = MAXLIGHT;
+                maxlight = MINLIGHT;
+                state = FIND_START_MIN;
             }
             break;
-        case ADJUST_SPEED:
-            period = mintime2-mintime1;
+        case END_STATE:
+            set_color(RGB(1,1,1));
+            _delay_ms(5);
+            set_color(RGB(0,0,0));
+            _delay_ms(300);
             printf("Period: %d, Speed: %d\n", period, left);
-            left -= motorstep;
-            set_motors(0xFF, 0);
-            _delay_us(100);
-            set_motors(left, right);
-            minlight1 = 1000;
-            minlight2 = 1000;
-            state = FIND_FIRST_MIN;
             break;
         default:
             break;
     }
-
-
-    prevlight = curlight;
-    curlight = get_ambientlight();
-    avglight = (curlight+prevlight)/2;
-    printf("Avg Light: %d, last period: %d\n", avglight, period);
 }
 
 int main() {

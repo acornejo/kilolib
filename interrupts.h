@@ -9,7 +9,7 @@ ISR(TIMER0_COMPA_vect) {
 	tx_clock += tx_increment;
     tx_increment = 0xFF;
 	OCR0A = tx_increment;
-    kilo_clock++;
+    kilo_ticks++;
 
 	if(!rx_busy && tx_clock>tx_period && !RB_empty(txbuffer)) {
         message_t *msg = (message_t*)&RB_front(txbuffer);

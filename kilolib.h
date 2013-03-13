@@ -1,11 +1,14 @@
 #include <stdint.h>
 #include "messages.h"
 
+#define RGB(r,g,b) (r&3)|(((g&3)<<2))|((b&3)<<4)
+
 // Updated roughly 30 times per second
-volatile uint32_t kilo_clock;
+volatile uint32_t kilo_ticks;
+#define TICKS_PER_SEC 31
 
 void set_motors(uint8_t, uint8_t);
-void set_color(uint8_t, uint8_t, uint8_t);
+void set_color(uint8_t);
 int16_t get_voltage();
 int16_t get_ambientlight();
 
