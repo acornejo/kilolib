@@ -9,7 +9,7 @@
 #define MAXLIGHT 1000
 #define MINLIGHT 0
 #define LIGHTSTEP 20
-#define MOTORSTEP 5
+#define MOTORSTEP 10
 
 uint16_t period;
 uint16_t prev_minticks;
@@ -19,8 +19,10 @@ uint16_t avglight;
 uint16_t minlight;
 uint16_t maxlight;
 uint16_t minticks;
-uint8_t precision;
-uint8_t left, right;
+uint8_t left;
+uint8_t right;
+uint8_t step;
+uint8_t speed;
 uint8_t i;
 
 enum {
@@ -31,21 +33,43 @@ enum {
     END_STATE
 } state;
 
+enum {
+    LEFT,
+    RIGHT,
+    NONE
+} motor;
+
 void program_init() {
     state = START_STATE;
+    motor = LEFT;
+    step = MOTORSTEP;
     curlight = 0;
     minlight = MAXLIGHT;
     maxlight = MINLIGHT;
-    precision = 0;
     prev_minticks = 0;
+    speed = 0;
     left = 0;
     right = 0;
 }
 
-inline void update_sensors() {
+void update_sensors() {
+    // Using low-pass filter with alpha=1/2
     prevlight = curlight;
-    curlight = get_ambientlight();
-    avglight = (curlight+prevlight)/2;
+    curlight = prevlight+(get_ambientlight()-prevlight)/2;
+}
+
+void update_motors(uint8_t speed) {
+    if (motor == LEFT) {
+        set_motors(0xFF, 0);
+        _delay_ms(1);
+        set_motors(speed, 0);
+    } else if (motor == RIGHT) {
+        set_motors(0, 0xFF);
+        _delay_ms(1);
+        set_motors(0, speed);
+    } else {
+        set_motors(0,0);
+    }
 }
 
 void program_loop() {
@@ -63,19 +87,18 @@ void program_loop() {
             state = FIND_THRESHOLD;
             break;
         case FIND_THRESHOLD:
-            if (curlight > prevlight+LIGHTSTEP/2 || curlight < prevlight-LIGHTSTEP/2) {
+            if (curlight > prevlight+LIGHTSTEP || curlight < prevlight-LIGHTSTEP) {
                 // Ensure we overshoot power. Otherwise we can get stuck
                 // on tiny surface glitches without completing any
                 // turns.
-                left += MOTORSTEP;
+                speed += step;
+                update_motors(speed);
                 state = FIND_START_MIN;
             } else {
-                left += MOTORSTEP;
                 set_color(RGB(1,0,0));
-                set_motors(0xFF, 0);
-                _delay_us(1000);
+                speed += step;
+                update_motors(speed);
                 set_color(RGB(0,0,0));
-                set_motors(left, 0);
                 _delay_ms(1000);
             }
             break;
@@ -100,26 +123,43 @@ void program_loop() {
                 if (prev_minticks != 0) {
                     period = prev_minticks - minticks;
                     if (period > IDEALPERIOD) {
-                        left += MOTORSTEP>>precision;
+                        speed += step;
                     } else {
-                        left -= MOTORSTEP>>precision;
+                        speed -= step;
                     }
-                    precision++;
-                    if (!(MOTORSTEP>>precision))
-                        state = END_STATE;
+                    step /= 2;
+                    update_motors(speed);
                 }
                 prev_minticks = minticks;
                 minlight = MAXLIGHT;
                 maxlight = MINLIGHT;
-                state = FIND_START_MIN;
+                if (step == 0)
+                    state = END_STATE;
+                else
+                    state = FIND_START_MIN;
             }
             break;
         case END_STATE:
+            if (motor == LEFT) {
+                left = speed;
+                motor = RIGHT;
+                speed = 0;
+                step = MOTORSTEP;
+                update_motors(speed);
+                state = START_STATE;
+            } else if (motor == RIGHT) {
+                right = speed;
+                motor = NONE;
+                speed = 0;
+                step = MOTORSTEP;
+                update_motors(speed);
+            }
+
             set_color(RGB(1,1,1));
             _delay_ms(5);
             set_color(RGB(0,0,0));
             _delay_ms(300);
-            printf("Period: %d, Speed: %d\n", period, left);
+            printf("Period: %d, Left Speed: %d, Right Speed: %d\n", period, left, right);
             break;
         default:
             break;
