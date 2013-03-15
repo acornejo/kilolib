@@ -16,4 +16,11 @@
 
 #define BF_get(NAME, IDX) (NAME##_data[IDX>>3] & (1<<(IDX&7)))
 
+#define BF_capacity(NAME) NAME##_size
+
+#define BF_clear(NAME) {\
+    int i=0;\
+    for (i=0; i<NAME##_size; i++) NAME##_data[i]=0;\
+}
+
 #endif//__BITFIELD_H__

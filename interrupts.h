@@ -1,6 +1,10 @@
 #include <stdlib.h> // for rand()
 
-#ifndef BOOTLOADER // not required in bootloader
+#ifdef BOOTLOADER // not required in bootloader
+
+EMPTY_INTERRUPT(TIMER0_COMPA_vect)
+
+#else
 /**
  * Timer0 interrupt.
  * Used to send messages every tx_period ticks.
@@ -23,10 +27,6 @@ ISR(TIMER0_COMPA_vect) {
     }
 }
 
-#else
-
-EMPTY_INTERRUPT(TIMER0_COMPA_vect)
-
 #endif
 /**
  * Timer1 interrupt.
@@ -48,7 +48,7 @@ ISR(TIMER1_COMPA_vect) {
 ISR(ANALOG_COMP_vect) {
 	uint16_t timer = TCNT1;
 
-    tx_timer_off();
+    /* tx_timer_off(); */
     rx_busy = 1;
     adc_trigger_stop();
 
@@ -63,11 +63,11 @@ ISR(ANALOG_COMP_vect) {
 	} else {
         // Stray bit received
         if (timer <= rx_bitcycles/2 || timer >= rx_bitcycles*9+rx_bitcycles/2) {
-            tx_timer_on();
+            /* tx_timer_on(); */
+            rx_timer_off();
             rx_leadingbit = 1;
             rx_leadingbyte = 1;
             rx_busy = 0;
-            rx_timer_off();
             adc_trigger_setlow();
         } else {
             uint8_t bitindex = (timer-rx_bitcycles/2)/rx_bitcycles;
@@ -79,10 +79,10 @@ ISR(ANALOG_COMP_vect) {
                     rx_high_gain = ADCW;
                     adc_trigger_setlow();
                     if (rx_bytevalue != 0) { // Collision detected.
-                        tx_timer_on();
+                        /* tx_timer_on(); */
+                        rx_timer_off();
                         rx_leadingbyte = 1;
                         rx_busy = 0;
-                        rx_timer_off();
                     } else {                // Leading byte received.
                         rx_leadingbyte = 0;
                         rx_byteindex = 0;
@@ -91,10 +91,10 @@ ISR(ANALOG_COMP_vect) {
                     rx_msg.rawdata[rx_byteindex] = rx_bytevalue;
                     rx_byteindex++;
                     if (rx_byteindex == sizeof(message_t)) {
-                        tx_timer_on();
+                        /* tx_timer_on(); */
+                        rx_timer_off();
                         rx_leadingbyte = 1;
                         rx_busy = 0;
-                        rx_timer_off();
 
                         if (rx_msg.crc == message_crc(&rx_msg))
                             process_message(&rx_msg);

@@ -174,7 +174,7 @@ void process_message(message_t *msg) {
     }
     set_color(RGB(0,0,0));
     motors_off();
-    tx_timer_off();
+    /* tx_timer_off(); */
     switch (msg->type) {
         case BOOT:
             bootload();
@@ -194,7 +194,7 @@ void process_message(message_t *msg) {
             break;
         case RUN:
             motors_on();
-            tx_timer_on();
+            /* tx_timer_on(); */
             kilo_state = RUNNING;
             break;
         case RESET:
@@ -205,10 +205,34 @@ void process_message(message_t *msg) {
     }
 }
 
-#else
+void txbuffer_push(message_t *msg)  {
+    msg->crc = message_crc(msg);
+    msg->type = NORMAL;
+    cli();
+    RB_back(txbuffer) = *msg;
+    RB_pushback(txbuffer);
+    sei();
+}
 
-void kilo_loop() {}
-#endif
+uint8_t txbuffer_size() {
+    return RB_size(txbuffer);
+}
+
+void rxbuffer_pop(message_t *msg) {
+    cli();
+    *msg = RB_front(rxbuffer);
+    RB_popfront(rxbuffer);
+    sei();
+}
+
+uint8_t rxbuffer_size() {
+    return RB_size(rxbuffer);
+}
+
+void set_motors(uint8_t ccw, uint8_t cw) {
+    OCR2A = ccw;
+    OCR2B = cw;
+}
 
 int16_t get_ambientlight() {
     int16_t light = -1;
@@ -219,6 +243,7 @@ int16_t get_ambientlight() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+        /* while ((ADCSRA&(1<<ADIF))==0); */
         light = ADCW;                             // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
@@ -241,6 +266,12 @@ int16_t get_voltage() {
 	}
     return voltage;
 }
+
+#else
+
+void kilo_loop() {}
+
+#endif
 
 void set_color(uint8_t rgb) {
     if (rgb&(1<<0))
@@ -273,35 +304,6 @@ void set_color(uint8_t rgb) {
 	else
 		DDRC &= ~(1<<4);
 
-}
-
-void set_motors(uint8_t ccw, uint8_t cw) {
-    OCR2A = ccw;
-    OCR2B = cw;
-}
-
-void txbuffer_push(message_t *msg)  {
-    msg->crc = message_crc(msg);
-    msg->type = NORMAL;
-    cli();
-    RB_back(txbuffer) = *msg;
-    RB_pushback(txbuffer);
-    sei();
-}
-
-uint8_t txbuffer_size() {
-    return RB_size(txbuffer);
-}
-
-void rxbuffer_pop(message_t *msg) {
-    cli();
-    *msg = RB_front(rxbuffer);
-    RB_popfront(rxbuffer);
-    sei();
-}
-
-uint8_t rxbuffer_size() {
-    return RB_size(rxbuffer);
 }
 
 #include "interrupts.h"
