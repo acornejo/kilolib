@@ -2,8 +2,8 @@
 #define __BITFIELD_H__
 
 #define BF_create(NAME, SIZE)\
-    unsigned char NAME##_data[(SIZE>>3) + 1] = {0};\
-    static const unsigned int NAME##_size = (SIZE>>3) + 1
+    unsigned char NAME##_data[(SIZE>>3)] = {0};\
+    static const unsigned int NAME##_size = (SIZE>>3)
 
 #define BF_init(NAME) {\
     int i=0;\
