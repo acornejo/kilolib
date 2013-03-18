@@ -22,6 +22,7 @@ void program_loop() {
 
     // blink leds 10 times during 10 seconds
     // in a red->green->blue pattern;
+    int8_t i;
     for (i = 0; i < 10; i++) {
         set_color(RGB(1,0,0));
         _delay_ms(333);

@@ -21,6 +21,13 @@
     o.tail = 0;\
 }
 
+#define RB_clear(o) {\
+    o.head = 0;\
+    o.tail = 0;\
+}
+
+#define RB_capacity(o) o##_rbsize
+
 #define RB_size(o)  (o.head <= o.tail ? o.tail-o.head : o##_rbsize-(o.head-o.tail))
 
 #define RB_empty(o) (o.head == o.tail)
@@ -53,6 +60,13 @@
     o.head = 0;\
     o.count = 0;\
 }
+
+#define RB_clear(o) {\
+    o.head = 0;\
+    o.count = 0;\
+}
+
+#define RB_capacity(o) o##_rbsize
 
 #define RB_size(o) o.count
 
