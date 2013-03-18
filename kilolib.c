@@ -267,10 +267,6 @@ int16_t get_voltage() {
     return voltage;
 }
 
-#else
-
-void kilo_loop(void (*program)(void)) {}
-
 #endif
 
 void set_color(uint8_t rgb) {
