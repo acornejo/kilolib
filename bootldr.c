@@ -4,8 +4,6 @@
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-/* #define DEBUG */
-/* #include "debug.h" */
 
 uint8_t  page_count;
 uint8_t  page_address;
@@ -19,22 +17,6 @@ void goto_program() {
     asm volatile ("jmp 0x0000");
 }
 
-void write_program_page() {
-    int i,j;
-    eeprom_busy_wait ();
-
-    boot_page_erase(page_address*SPM_PAGESIZE);
-    boot_spm_busy_wait();
-
-    for (i=0, j=0; i<SPM_PAGESIZE; i+=2, j++)
-        boot_page_fill(page_address*SPM_PAGESIZE+i, page_buffer[j]);
-
-    boot_page_write(page_address*SPM_PAGESIZE);
-    boot_spm_busy_wait();
-
-    boot_rww_enable ();
-}
-
 void process_message(message_t *msg) {
     if (msg->type == BOOTLOAD_PAGE) {
         if (page_address != msg->bootmsg.page_address) {
@@ -46,8 +28,27 @@ void process_message(message_t *msg) {
         page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
         page_byte_count += 6;
         if (page_byte_count >= SPM_PAGESIZE && !BF_get(page_table, page_address)) {
+            /**
+             * Write program page to flash.
+             *
+             * Taken from http://www.nongnu.org/avr-libc/user-manual/group__avr__boot.html
+             */
+
+            eeprom_busy_wait ();
+
+            boot_page_erase(page_address*SPM_PAGESIZE);
+            boot_spm_busy_wait();
+
+            int i,j;
+            for (i=0, j=0; i<SPM_PAGESIZE; i+=2, j++)
+                boot_page_fill(page_address*SPM_PAGESIZE+i, page_buffer[j]);
+
+            boot_page_write(page_address*SPM_PAGESIZE);
+            boot_spm_busy_wait();
+
+            boot_rww_enable ();
+
             set_color(RGB(0,3,0));
-            write_program_page();
             BF_set(page_table, page_address);
             page_count++;
             if (page_count == 220)
@@ -60,18 +61,8 @@ void process_message(message_t *msg) {
     } else {
         if (page_count == 0)
             goto_program();
-        /* else */
-        /* { */
-        /*     uint8_t i; */
-        /*     for (i=0; i<220; i++) { */
-        /*         debug_putchar(i,0); */
-        /*         debug_putchar(BF_get(page_table,i) ? 1 : 0,0); */
-        /*     } */
-        /* } */
     }
 }
-
-void program_loop() {}
 
 int main() {
 	// move interrupt vectors to bootloader interupts
@@ -81,7 +72,6 @@ int main() {
     sei();
     // initialize hardware
     kilo_init();
-    /* debug_init(); */
     // initalize variables
     BF_init(page_table);
     page_count = 0;
@@ -95,5 +85,6 @@ int main() {
         set_color(RGB(0,0,0));
         _delay_ms(1000);
     }
+
     return 0;
 }
