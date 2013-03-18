@@ -98,7 +98,7 @@ void kilo_init() {
 }
 
 #ifndef BOOTLOADER
-void kilo_loop() {
+void kilo_loop(void (*program)(void)) {
     int i, voltage;
     while (1) {
         switch(kilo_state) {
@@ -160,7 +160,7 @@ void kilo_loop() {
                 }
                 break;
             case RUNNING:
-                program_loop();
+                program();
                 break;
         }
     }
@@ -269,7 +269,7 @@ int16_t get_voltage() {
 
 #else
 
-void kilo_loop() {}
+void kilo_loop(void (*program)(void)) {}
 
 #endif
 

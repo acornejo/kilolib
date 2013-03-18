@@ -38,7 +38,7 @@ void program_loop() {
 
 int main() {
     kilo_init();
-    kilo_loop();
+    kilo_loop(program_loop);
 
     return 0;
 }

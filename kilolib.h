@@ -21,5 +21,4 @@ void rxbuffer_pop(message_t *);
 uint8_t rxbuffer_size();
 
 void kilo_init();
-void kilo_loop();
-extern void program_loop();
+void kilo_loop(void (*program)(void));

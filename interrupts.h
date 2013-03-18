@@ -33,7 +33,7 @@ ISR(TIMER0_COMPA_vect) {
  * Triggered after every a message is received.
  */
 ISR(TIMER1_COMPA_vect) {
-    tx_timer_on();
+    /* tx_timer_on(); */
     rx_timer_off();
     rx_leadingbit = 1;
     rx_leadingbyte = 1;
