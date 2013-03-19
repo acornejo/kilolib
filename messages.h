@@ -38,7 +38,8 @@ typedef enum {
     VOLTAGE,
     RUN,
     RESET,
-    BOOTLOAD_PAGE,
+    BOOTPGM_PAGE,
+    BOOTPGM_SIZE
 } message_type_t;
 
 /* Number of clock cycles per bit. */

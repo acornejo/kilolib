@@ -5,11 +5,12 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
+uint8_t  page_total;
 uint8_t  page_count;
 uint8_t  page_address;
 uint16_t page_byte_count;
 uint16_t page_buffer[SPM_PAGESIZE/2+2];
-BF_create(page_table, 220);
+BF_create(page_table, 224);
 
 void goto_program() {
     MCUCR = (1<<IVCE);
@@ -18,7 +19,7 @@ void goto_program() {
 }
 
 void process_message(message_t *msg) {
-    if (msg->type == BOOTLOAD_PAGE) {
+    if (msg->type == BOOTPGM_PAGE) {
         if (page_address != msg->bootmsg.page_address) {
             page_address = msg->bootmsg.page_address;
             page_byte_count = 0;
@@ -51,11 +52,15 @@ void process_message(message_t *msg) {
             set_color(RGB(0,3,0));
             BF_set(page_table, page_address);
             page_count++;
-            if (page_count == 220)
+            if (page_count == page_total)
                 goto_program();
         }
         else
             set_color(RGB(0,0,1));
+    } else if (msg->type == BOOTPGM_SIZE) {
+        page_total = msg->data[0];
+        if (page_count == page_total)
+            goto_program();
     } else if (msg->type == BOOT) {
             asm volatile ("jmp 0x7000");
     } else {
@@ -65,18 +70,19 @@ void process_message(message_t *msg) {
 }
 
 int main() {
-	// move interrupt vectors to bootloader interupts
     cli();
+	// move interrupt vectors to bootloader interupts
 	MCUCR = (1<<IVCE);
 	MCUCR = (1<<IVSEL);
-    sei();
-    // initialize hardware
-    kilo_init();
     // initalize variables
     BF_init(page_table);
+    page_total = 220;
     page_count = 0;
     page_address = 0;
     page_byte_count = 0;
+    sei();
+    // initialize hardware
+    kilo_init();
 
     // flash blue led
     while(1) {
