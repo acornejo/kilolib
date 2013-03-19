@@ -8,8 +8,6 @@
 #include <avr/interrupt.h>
 #include "ringbuffer.h"
 
-#define BAUD 19200
-
 #ifdef NONBLOCKING
 RB_create(debug_buffer, char, 511);
 
@@ -52,10 +50,16 @@ static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WR
 inline void debug_init() {
     cli();
 	DDRD |= (1<<1);                                 // Set UART TxD pin as output
+#define BAUD 76800
+#include <util/setbaud.h>
+    UBRR0 = UBRR_VALUE;
+#if USE_2X
+    UCSR0A |= (1<<U2X0);
+#else
+    UCSR0A &= ~(1<<U2X0);
+#endif
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<TXEN0);                           // Enable transmission
-	UCSR0A = 0;
-    UBRR0 = ((F_CPU/(BAUD*16UL))-1);
     debug_init_extra();
     stdout = &debug_stdout;
     sei();
