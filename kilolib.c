@@ -99,7 +99,7 @@ void kilo_init() {
 
 #ifndef BOOTLOADER
 void kilo_loop(void (*program)(void)) {
-    int i, voltage;
+    int16_t voltage;
     while (1) {
         switch(kilo_state) {
             case SLEEPING:
@@ -119,20 +119,16 @@ void kilo_loop(void (*program)(void)) {
                 rx_busy = 0;
                 ports_on();
                 adc_on();
-
                 _delay_us(300);
                 acomp_on();
 
-                for(i=0;i<10;i++) {
-                    if (rx_busy) {
-                        set_color(RGB(3,0,0));
-                        _delay_ms(100);
-                        break;
-                    } else {
-                        set_color(RGB(3,3,3));
-                        _delay_ms(1);
-                    }
+                set_color(RGB(3,3,3));
+                _delay_ms(10);
+                if (rx_busy) {
+                    set_color(RGB(3,0,0));
+                    _delay_ms(100);
                 }
+                set_color(RGB(0,0,0));
                 break;
             case IDLE:
                 set_color(RGB(0,3,0));
