@@ -73,8 +73,6 @@ uint8_t message_send(message_t *msg) {
     uint16_t k;
     uint8_t byte_idx;
     uint8_t ddr = IR_DDR;
-    uint8_t sreg = SREG;
-    cli();
 
     /* Enable IR output. */
     ir_on();
@@ -88,7 +86,6 @@ uint8_t message_send(message_t *msg) {
     for(k=0; k<rx_bitcycles; k++) {
         if((ACSR & (1<<ACO))>0) {
             IR_DDR = ddr;
-            SREG = sreg;
             return 0;
         }
     }
@@ -115,7 +112,6 @@ uint8_t message_send(message_t *msg) {
 
     ACSR |= (1<<ACI);
     IR_DDR = ddr;
-    SREG = sreg;
     return 1;
 }
 #endif
