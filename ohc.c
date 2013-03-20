@@ -1,8 +1,30 @@
 #include <avr/io.h>
+#include <string.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include "messages.h"
+#include "ringbuffer.h"
+
+// 01010101
+#define PACKET_HEADER 0x55
+#define PACKET_SIZE   128+4
+enum {
+    PACKET_STOP,
+    PACKET_LEDTOGGLE,
+    PACKET_FORWARDMSG,
+    PACKET_FORWARDRAWMSG,
+    PACKET_BOOTPAGE
+};
+
+uint8_t packet_buffer[PACKET_SIZE];
+uint8_t packet_head = 0;
+uint8_t packet_checksum = 0;
+uint8_t new_packet[PACKET_SIZE];
+volatile uint8_t packet_type;
+volatile uint8_t has_new_packet = 0;
+uint8_t leds_toggle = 0;
+message_t msg;
 
 #define ir_port PORTD
 #define ir_mask (1<<3)
@@ -10,13 +32,6 @@
 #define blue_mask (1<<2)
 #define green_port PORTB
 #define green_mask (1<<1)
-
-int i,j;
-uint8_t page;
-uint8_t leds_toggle = 0;
-message_t msg;
-
-volatile	int ReceivedByte;
 
 int main() {
     // Set port outputs
@@ -48,6 +63,7 @@ int main() {
     tx_maskoff = ~tx_maskon;
 
 	// Use LEDs to flash power on indicator signal.
+    uint8_t i;
     for (i=0; i<5; i++) {
         blue_port |= blue_mask;
         green_port |= green_mask;
@@ -57,148 +73,86 @@ int main() {
         _delay_ms(200);
     }
 
-    for (i=0;i<sizeof(msg.rawdata); i++)
-        msg.rawdata[i] = 0;
-
-    /* while(1) { */
-    /*     message_send(&msg); */
-    /*     _delay_ms(20); */
-    /* } */
-
 	while(1) {
-		if(ReceivedByte) {
-            int message_received = ReceivedByte;
-            ReceivedByte = 0;
-
-            switch(message_received) {
-            case 'a':
-                // send bootload message again
-                msg.type = BOOT;
-                msg.crc = message_crc(&msg);
-				for(i=0;i<100;i++) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-				_delay_ms(1000);
-
-				// send bootload pages until uart says to stop
-                page = 0;
-                while (!ReceivedByte) {
-                    msg.type = BOOTPGM_PAGE;
-                    msg.bootmsg.page_address = page;
-                    for (i=0; i<SPM_PAGESIZE; i+=6) {
-                        msg.bootmsg.page_offset = i/2;
-                        msg.bootmsg.word1 = pgm_read_word(page*SPM_PAGESIZE+i);
-                        msg.bootmsg.word2 = pgm_read_word(page*SPM_PAGESIZE+i+2);
-                        msg.bootmsg.word3 = pgm_read_word(page*SPM_PAGESIZE+i+4);
-                        msg.crc = message_crc(&msg);
-                        message_send(&msg);
-                    }
-                    green_port |= green_mask;
-                    _delay_ms(10);
-                    green_port &= ~green_mask;
-                    _delay_ms(10);
-                    page++;
-                    if (page >= 220)
-                        page = 0;
-                }
-                for (i=0;i<sizeof(msg.rawdata); i++)
-                    msg.rawdata[i] = 0;
+        if (has_new_packet) {
+            has_new_packet = 0;
+            switch(packet_type) {
+            case PACKET_STOP:
                 break;
-            case 'i':
+            case PACKET_LEDTOGGLE:
                 leds_toggle = !leds_toggle;
                 if (leds_toggle)
                     blue_port |= blue_mask;
                 else
                     blue_port &= ~blue_mask;
                 break;
-            case 'j':
-                msg.type = BOOT;
+            case PACKET_FORWARDMSG:
+                for (i = 0; i<sizeof(message_t)-sizeof(msg.crc); i++)
+                    msg.rawdata[i] = new_packet[i+2];
                 msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
+                while(!has_new_packet) {
                     message_send(&msg);
                     green_port |= green_mask;
-					_delay_ms(10);
+                    _delay_ms(3);
                     green_port &= ~green_mask;
-					_delay_ms(10);
-				}
+                    _delay_ms(3);
+                }
                 break;
-            case 'b':
-                msg.type = SLEEP;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
+            case PACKET_FORWARDRAWMSG:
+                for (i = 0; i<sizeof(message_t); i++)
+                    msg.rawdata[i] = new_packet[i+2];
+                while(!has_new_packet) {
                     message_send(&msg);
                     green_port |= green_mask;
-					_delay_ms(10);
+                    _delay_ms(3);
                     green_port &= ~green_mask;
-					_delay_ms(10);
-				}
+                    _delay_ms(3);
+                }
                 break;
-            case 'c':
-            case 'd':
-                msg.type = WAKEUP;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
+            case PACKET_BOOTPAGE:
+                msg.bootmsg.type = BOOTPGM_PAGE;
+                msg.bootmsg.page_address = new_packet[2];
+                msg.bootmsg.unused = 0;
+                cli();
+                for (i = 0; i<SPM_PAGESIZE && !has_new_packet; i+=6) {
+                    msg.bootmsg.page_offset = i/2;
+                    memcpy(&msg.bootmsg.word1, new_packet+3+i, 6);
+                    msg.bootmsg.crc = message_crc(&msg);
                     message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-                break;
-            case 'e':
-                msg.type = VOLTAGE;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-                break;
-            case 'f':
-                msg.type = RUN;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-                break;
-            case 'g':
-                msg.type = CHARGE;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-                break;
-            case 'z':
-                msg.type = RESET;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
+                }
+                sei();
+                green_port |= green_mask;
+                _delay_ms(10);
+                green_port &= ~green_mask;
+                _delay_ms(10);
                 break;
             }
 		}
 	}
+
     return 0;
 }
 
 ISR(USART_RX_vect) {
-    ReceivedByte = UDR0;
+    uint8_t rx = UDR0;
+
+    packet_checksum ^= packet_buffer[packet_head];
+    packet_buffer[packet_head] = rx;
+    packet_checksum ^= rx;
+    packet_head++;
+    if (packet_head >= PACKET_SIZE)
+        packet_head = 0;
+
+    if (packet_buffer[packet_head] == PACKET_HEADER) {
+        if (packet_checksum == 0) {
+            uint16_t i;
+            uint16_t num = PACKET_SIZE-packet_head;
+            for (i = 0; i < num; i++)
+                new_packet[i] = packet_buffer[i+packet_head];
+            for (i = num; i < PACKET_SIZE; i++)
+                new_packet[i] = packet_buffer[i-num];
+            has_new_packet = 1;
+            packet_type = new_packet[1];
+        }
+    }
 }
