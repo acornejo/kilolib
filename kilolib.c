@@ -160,7 +160,7 @@ void kilo_loop(void (*program)(void)) {
 }
 
 void process_message(message_t *msg) {
-    if (msg->type == NORMAL) {
+    if (msg->type < SPECIAL) {
         RB_back(rxbuffer) = *msg;
         RB_pushback(rxbuffer);
         return;
@@ -172,10 +172,12 @@ void process_message(message_t *msg) {
         case BOOT:
             bootload();
             break;
+        case RESET:
+            reset();
+            break;
         case SLEEP:
             kilo_state = SLEEPING;
             break;
-        case PAUSE:
         case WAKEUP:
             kilo_state = IDLE;
             break;
@@ -189,9 +191,6 @@ void process_message(message_t *msg) {
             motors_on();
             /* tx_timer_on(); */
             kilo_state = RUNNING;
-            break;
-        case RESET:
-            reset();
             break;
         default:
             break;

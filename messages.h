@@ -30,16 +30,16 @@ uint8_t message_send(message_t *);
 
 typedef enum {
     NORMAL = 0,
+    SPECIAL = 0x80,
+    BOOT = 0x80,
+    BOOTPGM_PAGE,
+    BOOTPGM_SIZE,
+    RESET,
     SLEEP,
-    BOOT,
     WAKEUP,
-    PAUSE,
     CHARGE,
     VOLTAGE,
     RUN,
-    RESET,
-    BOOTPGM_PAGE,
-    BOOTPGM_SIZE
 } message_type_t;
 
 /* Number of clock cycles per bit. */
