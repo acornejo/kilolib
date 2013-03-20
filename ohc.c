@@ -138,18 +138,8 @@ int main() {
 				}
                 break;
             case 'c':
-                msg.type = WAKEUP;
-                msg.crc = message_crc(&msg);
-				while(!ReceivedByte) {
-                    message_send(&msg);
-                    green_port |= green_mask;
-					_delay_ms(10);
-                    green_port &= ~green_mask;
-					_delay_ms(10);
-				}
-                break;
             case 'd':
-                msg.type = PAUSE;
+                msg.type = WAKEUP;
                 msg.crc = message_crc(&msg);
 				while(!ReceivedByte) {
                     message_send(&msg);

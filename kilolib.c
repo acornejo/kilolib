@@ -39,25 +39,6 @@ static volatile enum {
     CHARGING,
 } kilo_state;
 
-
-#ifndef BOOTLOADER
-// Ensure that wdt is inactive after system reset.
-void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
-
-void wdt_init(void) {
-    MCUSR = 0;
-    wdt_disable();
-}
-
-/**
- * Watchdog timer interrupt.
- * Used to wakeup from low power sleep mode.
- */
-ISR(WDT_vect) {
-    wdt_disable();
-}
-#endif
-
 /**
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
@@ -98,6 +79,22 @@ void kilo_init() {
 }
 
 #ifndef BOOTLOADER
+// Ensure that wdt is inactive after system reset.
+void wdt_init(void) __attribute__((naked)) __attribute__((section(".init3")));
+
+void wdt_init(void) {
+    MCUSR = 0;
+    wdt_disable();
+}
+
+/**
+ * Watchdog timer interrupt.
+ * Used to wakeup from low power sleep mode.
+ */
+ISR(WDT_vect) {
+    wdt_disable();
+}
+
 void kilo_loop(void (*program)(void)) {
     int16_t voltage;
     while (1) {
@@ -163,7 +160,7 @@ void kilo_loop(void (*program)(void)) {
 }
 
 void process_message(message_t *msg) {
-    if (msg->type == NORMAL) {
+    if (msg->type < SPECIAL) {
         RB_back(rxbuffer) = *msg;
         RB_pushback(rxbuffer);
         return;
@@ -175,10 +172,12 @@ void process_message(message_t *msg) {
         case BOOT:
             bootload();
             break;
+        case RESET:
+            reset();
+            break;
         case SLEEP:
             kilo_state = SLEEPING;
             break;
-        case PAUSE:
         case WAKEUP:
             kilo_state = IDLE;
             break;
@@ -192,9 +191,6 @@ void process_message(message_t *msg) {
             motors_on();
             /* tx_timer_on(); */
             kilo_state = RUNNING;
-            break;
-        case RESET:
-            reset();
             break;
         default:
             break;
