@@ -199,8 +199,8 @@ void process_message(message_t *msg) {
 }
 
 void txbuffer_push(message_t *msg)  {
-    msg->crc = message_crc(msg);
     msg->type = NORMAL;
+    msg->crc = message_crc(msg);
     cli();
     RB_back(txbuffer) = *msg;
     RB_pushback(txbuffer);
