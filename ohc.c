@@ -11,8 +11,6 @@
 #define green_port PORTB
 #define green_mask (1<<1)
 
-#define BAUD 19200
-
 int i,j;
 uint8_t page;
 uint8_t leds_toggle = 0;
@@ -34,7 +32,14 @@ int main() {
 	MCUCR = (1<<IVSEL);
 
 	cli();
-    UBRR0 = ((F_CPU/(BAUD*16UL))-1);            // Set baud rate
+#define BAUD 76800
+#include <util/setbaud.h>
+    UBRR0 = UBRR_VALUE;
+#if USE_2X
+    UCSR0A |= (1<<U2X0);
+#else
+    UCSR0A &= ~(1<<U2X0);
+#endif
 	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
 	UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
 	sei();
