@@ -19,17 +19,17 @@ AddressPointer_t bootload = (AddressPointer_t)0x7000;
 // ring buffers for input/output messages
 volatile RB_create(txbuffer, message_t, 4);
 volatile RB_create(rxbuffer, message_t, 4);
+volatile RB_create(rxdistbuffer, distance_measurement_t, 4);
 
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
 message_t rx_msg;                  // message being received
+distance_measurement_t rx_dist;    // signal strength of message being received
 volatile uint8_t rx_busy;          // flag that signals if message is being received
 uint8_t rx_leadingbit;             // flag that signals start bit
 uint8_t rx_leadingbyte;            // flag that signals start byte
 uint8_t rx_byteindex;              // index to the current byte being decoded
 uint8_t rx_bytevalue;              // value of the current byte being decoded
-uint16_t rx_high_gain;             // signal strength of first start bit  (with high gain resistor)
-uint16_t rx_low_gain;              // signal strength of second start bit (with low gain resistor)
 
 static volatile enum {
     SLEEPING,
@@ -61,6 +61,7 @@ void kilo_init() {
 
     RB_init(txbuffer);
     RB_init(rxbuffer);
+    RB_init(rxdistbuffer);
     OSCCAL = eeprom_read_byte((uint8_t *)EEPROM_OSCCAL);
 	tx_maskon = eeprom_read_byte((uint8_t *)EEPROM_TXMASK);
     tx_maskoff = ~tx_maskon;
@@ -71,8 +72,6 @@ void kilo_init() {
     rx_leadingbyte = 1;
     rx_byteindex = 0;
     rx_bytevalue = 0;
-    rx_high_gain = 0;
-    rx_low_gain = 0;
     kilo_ticks = 0;
     kilo_state = IDLE;
     sei();
@@ -163,6 +162,8 @@ void process_message(message_t *msg) {
     if (msg->type < SPECIAL) {
         RB_back(rxbuffer) = *msg;
         RB_pushback(rxbuffer);
+        RB_back(rxdistbuffer) = rx_dist;
+        RB_pushback(rxdistbuffer);
         return;
     }
     set_color(RGB(0,0,0));
@@ -210,10 +211,12 @@ uint8_t txbuffer_size() {
     return RB_size(txbuffer);
 }
 
-void rxbuffer_pop(message_t *msg) {
+void rxbuffer_pop(message_t *msg, distance_measurement_t *dist) {
     cli();
     *msg = RB_front(rxbuffer);
     RB_popfront(rxbuffer);
+    *dist = RB_front(rxdistbuffer);
+    RB_popfront(rxdistbuffer);
     sei();
 }
 

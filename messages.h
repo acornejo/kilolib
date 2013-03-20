@@ -6,20 +6,20 @@
 typedef union {
     uint8_t rawdata[12];
     struct {
-        uint8_t data[9];
+        union {
+            uint8_t data[9];
+            struct {
+                uint8_t page_address;
+                uint8_t page_offset;
+                uint16_t word1;
+                uint16_t word2;
+                uint16_t word3;
+                uint8_t unused;
+            } bootmsg;
+        };
         uint8_t type;
         uint16_t crc;
     };
-    struct {
-        uint8_t page_address;
-        uint8_t page_offset;
-        uint16_t word1;
-        uint16_t word2;
-        uint16_t word3;
-        uint8_t unused;
-        uint8_t type;
-        uint16_t crc;
-    } bootmsg;
 } message_t;
 
 volatile uint8_t tx_maskon;
