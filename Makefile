@@ -47,15 +47,11 @@ build/ohc.elf: ohc.c messages.c | build
 build/bootldr.elf: bootldr.c kilolib.c messages.c interrupts.h | build
 	$(AVRCC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c messages.c
 
-build/ohc-merged.hex: build/program.hex build/ohc.hex
-	cat build/program.hex | grep -v ":00000001FF" > $@
-	cat build/ohc.hex >> $@
-
 build/kilo-merged.hex: build/program.hex build/bootldr.hex
 	cat build/program.hex | grep -v ":00000001FF" > $@
 	cat build/bootldr.hex >> $@
 
-program-ohc: build/ohc-merged.hex
+program-ohc: build/ohc.hex
 	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
 
 program-kilo: build/kilo-merged.hex

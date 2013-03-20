@@ -110,14 +110,14 @@ int main() {
                 }
                 break;
             case PACKET_BOOTPAGE:
-                msg.bootmsg.type = BOOTPGM_PAGE;
+                msg.type = BOOTPGM_PAGE;
                 msg.bootmsg.page_address = new_packet[2];
                 msg.bootmsg.unused = 0;
                 cli();
                 for (i = 0; i<SPM_PAGESIZE && !has_new_packet; i+=6) {
                     msg.bootmsg.page_offset = i/2;
                     memcpy(&msg.bootmsg.word1, new_packet+3+i, 6);
-                    msg.bootmsg.crc = message_crc(&msg);
+                    msg.crc = message_crc(&msg);
                     message_send(&msg);
                 }
                 sei();
