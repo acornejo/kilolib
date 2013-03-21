@@ -1,5 +1,5 @@
-#define tx_timer_on()       TIMSK0 &= ~(1<<OCIE0A)
-#define tx_timer_off()      TIMSK0 |= (1<<OCIE0A)
+#define tx_timer_on()       TIMSK0 |= (1<<OCIE0A)
+#define tx_timer_off()      TIMSK0 &= ~(1<<OCIE0A)
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
 #define acomp_on()          ACSR |= (1<<ACIE)|(1<<ACI)

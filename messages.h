@@ -47,6 +47,6 @@ typedef enum {
 /* Number of clock cycles for an entire message. */
 #define rx_msgcycles (10*rx_bitcycles*(sizeof(message_t)+1))
 /* Number of timer cycles between consecutive messages. */
-#define tx_period 50000
+#define tx_period 3906
 
 #endif//__MESSAGES_H__
