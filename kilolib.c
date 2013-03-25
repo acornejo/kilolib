@@ -211,6 +211,10 @@ uint8_t txbuffer_size() {
     return RB_size(txbuffer);
 }
 
+uint8_t rxbuffer_peek_type() {
+    return RB_front(rxbuffer).type;
+}
+
 void rxbuffer_pop(message_t *msg, distance_measurement_t *dist) {
     cli();
     *msg = RB_front(rxbuffer);

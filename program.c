@@ -50,7 +50,7 @@ void program_loop() {
 
 
     // activate motors
-    set_motors(255,255)
+    set_motors(255,255);
     _delay_ms(20);
     // go straight for 0.5 seconds
     set_motors(0x70, 0x70);
