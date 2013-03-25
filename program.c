@@ -15,13 +15,6 @@ void program_loop() {
     if (rxbuffer_size() > 0) {
         // Pop message from RX buffer
         rxbuffer_pop(&msg, &dist);
-        // Move forward
-        set_motors(255,255);
-        _delay_ms(20);
-        set_motors(0x80, 0x80);
-    } else {
-        // stop
-        set_motors(0,0);
     }
 
     // read ambient light sensor
@@ -55,6 +48,15 @@ void program_loop() {
         _delay_ms(800);
     }
 
+
+    // activate motors
+    set_motors(255,255)
+    _delay_ms(20);
+    // go straight for 0.5 seconds
+    set_motors(0x70, 0x70);
+    _delay_ms(500);
+    // stop
+    set_motors(0,0);
 }
 
 int main() {

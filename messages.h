@@ -16,6 +16,13 @@ typedef union {
                 uint16_t word3;
                 uint8_t unused;
             } bootmsg;
+            struct {
+                uint8_t id;
+                int16_t x;
+                int16_t y;
+                int8_t theta;
+                uint8_t unused[3];
+            } gpsmsg;
         };
         uint8_t type;
         uint16_t crc;
