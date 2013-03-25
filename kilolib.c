@@ -9,8 +9,9 @@
 #include "ringbuffer.h"
 #include "macros.h"
 
-#define EEPROM_OSCCAL 0x01
-#define EEPROM_TXMASK 0x90
+#define EEPROM_OSCCAL (uint8_t*)0x01
+#define EEPROM_TXMASK (uint8_t*)0x90
+#define EEPROM_UID    (uint8_t*)0xB0
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
@@ -37,6 +38,7 @@ static volatile enum {
     BATTERY,
     RUNNING,
     CHARGING,
+    READINGUID
 } kilo_state;
 
 /**
@@ -62,8 +64,8 @@ void kilo_init() {
     RB_init(txbuffer);
     RB_init(rxbuffer);
     RB_init(rxdistbuffer);
-    OSCCAL = eeprom_read_byte((uint8_t *)EEPROM_OSCCAL);
-	tx_maskon = eeprom_read_byte((uint8_t *)EEPROM_TXMASK);
+    OSCCAL = eeprom_read_byte(EEPROM_OSCCAL);
+	tx_maskon = eeprom_read_byte(EEPROM_TXMASK);
     tx_maskoff = ~tx_maskon;
     tx_clock = 0;
     tx_increment = 255;
@@ -74,6 +76,7 @@ void kilo_init() {
     rx_bytevalue = 0;
     kilo_ticks = 0;
     kilo_state = IDLE;
+    kilo_uid = eeprom_read_byte(EEPROM_UID) | eeprom_read_byte(EEPROM_UID+1)<<8;
     sei();
 }
 
@@ -151,6 +154,8 @@ void kilo_loop(void (*program)(void)) {
 					_delay_ms(200);
                 }
                 break;
+            case READINGUID:
+                break;
             case RUNNING:
                 program();
                 break;
@@ -168,7 +173,6 @@ void process_message(message_t *msg) {
     }
     set_color(RGB(0,0,0));
     motors_off();
-    /* tx_timer_off(); */
     switch (msg->type) {
         case BOOT:
             bootload();
@@ -188,9 +192,19 @@ void process_message(message_t *msg) {
         case VOLTAGE:
             kilo_state = BATTERY;
             break;
+        case READUID:
+            kilo_state = READINGUID;
+            uint8_t bit = msg->data[0];
+            if (bit < 16) {
+                if (kilo_uid&(1<<bit))
+                    set_color(RGB(0,0,1));
+                else
+                    set_color(RGB(0,0,0));
+            } else if (bit == 255)
+                set_color(RGB(0,0,1));
+            break;
         case RUN:
             motors_on();
-            /* tx_timer_on(); */
             kilo_state = RUNNING;
             break;
         default:

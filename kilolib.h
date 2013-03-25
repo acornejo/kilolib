@@ -5,6 +5,7 @@
 
 #define TICKS_PER_SEC 31
 volatile uint32_t kilo_ticks;
+uint16_t kilo_uid;
 
 void set_motors(uint8_t, uint8_t);
 void set_color(uint8_t);
