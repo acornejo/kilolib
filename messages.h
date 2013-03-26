@@ -2,6 +2,7 @@
 #define __MESSAGES_H__
 
 #include <stdint.h>
+#include <util/crc16.h>
 
 typedef union {
     uint8_t rawdata[12];
@@ -32,7 +33,14 @@ typedef union {
 volatile uint8_t tx_maskon;
 volatile uint8_t tx_maskoff;
 
-uint16_t message_crc(message_t *);
+uint16_t message_crc(message_t *msg) {
+    uint8_t i;
+    uint16_t crc = 0xFFFF;
+    for (i = 0; i<sizeof(message_t)-sizeof(msg->crc); i++)
+        crc = _crc_ccitt_update(crc, msg->rawdata[i]);
+    return crc;
+}
+
 uint8_t message_send(message_t *);
 
 typedef enum {
