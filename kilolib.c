@@ -41,6 +41,9 @@ static volatile enum {
     READINGUID
 } kilo_state;
 
+uint8_t kilo_bit;
+uint8_t needboost = 1;
+
 /**
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
@@ -66,7 +69,6 @@ void kilo_init() {
     RB_init(rxdistbuffer);
     OSCCAL = eeprom_read_byte(EEPROM_OSCCAL);
 	tx_maskon = eeprom_read_byte(EEPROM_TXMASK);
-    tx_maskoff = ~tx_maskon;
     tx_clock = 0;
     tx_increment = 255;
     rx_busy = 0;
@@ -155,6 +157,17 @@ void kilo_loop(void (*program)(void)) {
                 }
                 break;
             case READINGUID:
+                if (kilo_uid&(1<<kilo_bit)) {
+                    if (needboost) {
+                        set_motors(255, 0);
+                        _delay_ms(20);
+                        needboost = 0;
+                    }
+                    set_motors(0x80,0);
+                } else {
+                    set_motors(0,0);
+                    needboost = 1;
+                }
                 break;
             case RUNNING:
                 program();
@@ -193,15 +206,11 @@ void process_message(message_t *msg) {
             kilo_state = BATTERY;
             break;
         case READUID:
-            kilo_state = READINGUID;
-            uint8_t bit = msg->data[0];
-            if (bit < 16) {
-                if (kilo_uid&(1<<bit))
-                    set_color(RGB(0,0,1));
-                else
-                    set_color(RGB(0,0,0));
-            } else if (bit == 255)
-                set_color(RGB(0,0,1));
+            if (kilo_state != READINGUID) {
+                needboost = 1;
+                kilo_state = READINGUID;
+            }
+            kilo_bit = msg->data[0];
             break;
         case RUN:
             motors_on();

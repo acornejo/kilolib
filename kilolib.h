@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "messages.h"
+#include "message.h"
 
 #define RGB(r,g,b) (r&3)|(((g&3)<<2))|((b&3)<<4)
 

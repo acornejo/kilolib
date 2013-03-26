@@ -3,7 +3,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
-#include "messages.h"
+#include "message.h"
 #include "ringbuffer.h"
 
 // 01010101
@@ -60,7 +60,6 @@ int main() {
 	sei();
 
     tx_maskon = ir_mask;
-    tx_maskoff = ~tx_maskon;
 
 	// Use LEDs to flash power on indicator signal.
     uint8_t i;
