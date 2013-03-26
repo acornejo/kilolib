@@ -9,11 +9,18 @@
 #define IR_DDR DDRB
 #endif
 
+#define tmpreg1  r18
+#define tmpreg2  r19
+#define bitmaskL r20
+#define bitmaskH r21
+#define bytevalL r24
+#define bytevalH r25
+#define byteidx  r26
+#define bitidx   r27
+#define ddrreg   r28
+
 .extern tx_maskon
 .global message_send
-
-#define tmpreg1 r18
-#define tmpreg2 r19
 
 .section .text
 
@@ -41,13 +48,26 @@
     out IR_PORT, tmpreg1  ;  1
 .endm                     ;  total = 16 cycles
 
-#define byteidx  r26
-#define bitidx   r28
-#define bytevalL r24
-#define bytevalH r25
-#define bitmaskL r20
-#define bitmaskH r21
-#define ddrreg   r27
+.macro return retval
+    ldi r24, \retval
+    ret
+.endm
+
+.macro busywait cycles
+.if \cycles%3 == 0
+    nop
+    nop
+    ldi tmpreg1, \cycles/3-1
+.elseif \cycles%3 == 1
+    ldi tmpreg1, \cycles/3
+.else
+    nop
+    ldi tmpreg1, \cycles/3-1
+.endif
+1:
+    dec tmpreg1
+    brne 1b
+.endm
 
 message_send:
     ; ddreg = IR_DDR
@@ -61,10 +81,7 @@ message_send:
     ldi tmpreg1, 0x01
     irsend 
 
-    ldi tmpreg1, 165 ;; (256*2-16-3)/3
-busywait1:
-    dec tmpreg1
-    brne busywait1
+    busywait (256*2-16)
 
     ldi tmpreg1, 224 ;; (256*7/8)
 checkcollision:
@@ -74,9 +91,7 @@ checkcollision:
     rjmp nocollision
     ; IR_DDR = ddrreg
     out IR_DDR, ddrreg
-    ; return 0
-    ldi r24, 0
-    ret
+    return 0
 nocollision:
     subi tmpreg1, 0x01
     nop
@@ -85,13 +100,7 @@ nocollision:
     ldi tmpreg1, 0x01
     irsend 
 
-    nop
-    nop
-    ldi tmpreg1, 79;  (256-16-3)/3
-busywait2:
-    dec tmpreg1
-    brne busywait2
-
+    busywait (256-16)
 
     movw r30, r24     ; // copy msg pointer in r24:r25 to r30:r31
     ldi byteidx, 12
@@ -115,15 +124,10 @@ sendbit: ; 9 cycles per iteration + irsend
     movw tmpreg1, bitmaskL
     and tmpreg1, bytevalL
     and tmpreg2, bytevalH
-    or  tmpreg1, tmpreg1
+    or  tmpreg1, tmpreg2
     irsend 
 
-    nop
-    nop
-    ldi tmpreg1, 76   ; (256-9-16-3)/3
-busywait3:
-    dec tmpreg1
-    brne busywait3
+    busywait (256-9-16)
 
     ; bitmask <<= 1
     add bitmaskL, bitmaskL
@@ -144,6 +148,4 @@ bytedone:
     out ACSR, tmpreg1
     ; IR_DDR = ddrreg
     out IR_DDR, ddrreg
-    ; return 1
-    ldi r24, 1
-    ret
+    return 1
