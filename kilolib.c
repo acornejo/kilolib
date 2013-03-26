@@ -38,11 +38,7 @@ static volatile enum {
     BATTERY,
     RUNNING,
     CHARGING,
-    READINGUID
 } kilo_state;
-
-uint8_t kilo_bit;
-uint8_t needboost = 1;
 
 /**
  * Initialize all global variables to a known state.
@@ -156,19 +152,6 @@ void kilo_loop(void (*program)(void)) {
 					_delay_ms(200);
                 }
                 break;
-            case READINGUID:
-                if (kilo_uid&(1<<kilo_bit)) {
-                    if (needboost) {
-                        set_motors(255, 0);
-                        _delay_ms(20);
-                        needboost = 0;
-                    }
-                    set_motors(0x80,0);
-                } else {
-                    set_motors(0,0);
-                    needboost = 1;
-                }
-                break;
             case RUNNING:
                 program();
                 break;
@@ -204,13 +187,6 @@ void process_message(message_t *msg) {
             break;
         case VOLTAGE:
             kilo_state = BATTERY;
-            break;
-        case READUID:
-            if (kilo_state != READINGUID) {
-                needboost = 1;
-                kilo_state = READINGUID;
-            }
-            kilo_bit = msg->data[0];
             break;
         case RUN:
             motors_on();

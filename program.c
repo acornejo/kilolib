@@ -48,14 +48,13 @@ void program_loop() {
         _delay_ms(800);
     }
 
-
     // activate motors
     set_motors(255,255);
     _delay_ms(20);
-    // go straight for 0.5 seconds
+    // go straight for 0.1 seconds
     set_motors(0x70, 0x70);
-    _delay_ms(500);
-    // stop
+    _delay_ms(100);
+    // turn motors off
     set_motors(0,0);
 }
 

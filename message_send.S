@@ -15,9 +15,9 @@
 #define bitmaskH r21
 #define bytevalL r22
 #define bytevalH r23
-#define byteidx  r26
-#define bitidx   r27
-#define ddrreg   r28
+#define byteidx  r24
+#define bitidx   r25
+#define ddrreg   r26
 
 .extern tx_maskon
 
