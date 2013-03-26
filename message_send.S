@@ -13,14 +13,13 @@
 #define tmpreg2  r19
 #define bitmaskL r20
 #define bitmaskH r21
-#define bytevalL r24
-#define bytevalH r25
+#define bytevalL r22
+#define bytevalH r23
 #define byteidx  r26
 #define bitidx   r27
 #define ddrreg   r28
 
 .extern tx_maskon
-.global message_send
 
 .section .text
 
@@ -70,6 +69,8 @@
     dec tmpreg1
     brne 1b
 .endm
+
+.global message_send
 
 message_send:
     ; ddreg = IR_DDR
@@ -129,11 +130,11 @@ sendbit: ; 9 cycles per iteration + irsend
     or  tmpreg1, tmpreg2
     irsend 
 
-    delay_cycles (rx_bitcycles-irsend_cycles-9)
-
     ; bitmask <<= 1
     add bitmaskL, bitmaskL
     adc bitmaskH, bitmaskH
+
+    delay_cycles (rx_bitcycles-irsend_cycles-9)
 
     ; if (bitidex--) goto sendbit
     dec bitidx
