@@ -38,14 +38,14 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 build:
 	mkdir -p $@
 
-build/program.elf: program.c kilolib.c messages.c interrupts.h | build
-	$(AVRCC) $(CFLAGS) -o $@ program.c kilolib.c messages.c
+build/program.elf: program.c kilolib.c messages.S interrupts.h | build
+	$(AVRCC) $(CFLAGS) -o $@ program.c kilolib.c messages.S
 
-build/ohc.elf: ohc.c messages.c | build
-	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c messages.c
+build/ohc.elf: ohc.c messages.S | build
+	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c messages.S
 
-build/bootldr.elf: bootldr.c kilolib.c messages.c interrupts.h | build
-	$(AVRCC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c messages.c
+build/bootldr.elf: bootldr.c kilolib.c interrupts.h | build
+	$(AVRCC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c 
 
 build/kilo-merged.hex: build/program.hex build/bootldr.hex
 	cat build/program.hex | grep -v ":00000001FF" > $@
