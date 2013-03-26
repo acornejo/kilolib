@@ -47,20 +47,22 @@
     and tmpreg1, tmpreg2  ;  1
     out IR_PORT, tmpreg1  ;  1
 .endm                     ;  total = 16 cycles
+#define irsend_cycles 16
+#define rx_bitcycles  256
 
 .macro return retval
     ldi r24, \retval
     ret
 .endm
 
-.macro busywait cycles
+.macro delay_cycles cycles
 .if \cycles%3 == 0
-    nop
-    nop
-    ldi tmpreg1, \cycles/3-1
+    ldi tmpreg1, \cycles/3
 .elseif \cycles%3 == 1
+    nop
     ldi tmpreg1, \cycles/3
 .else
+    nop
     nop
     ldi tmpreg1, \cycles/3-1
 .endif
@@ -81,7 +83,7 @@ message_send:
     ldi tmpreg1, 0x01
     irsend 
 
-    busywait (256*2-16)
+    delay_cycles (2*rx_bitcycles-irsend_cycles)
 
     ldi tmpreg1, 224 ;; (256*7/8)
 checkcollision:
@@ -93,24 +95,19 @@ checkcollision:
     out IR_DDR, ddrreg
     return 0
 nocollision:
-    subi tmpreg1, 0x01
     nop
+    dec tmpreg1
     brne checkcollision
 
     ldi tmpreg1, 0x01
     irsend 
 
-    busywait (256-16)
+    delay_cycles (rx_bitcycles-irsend_cycles)
 
     movw r30, r24     ; // copy msg pointer in r24:r25 to r30:r31
     ldi byteidx, 12
 
 sendbyte:
-    ; bitidex = 10
-    ldi bitidx, 10
-    ; bitmask = 0x00001
-    ldi bitmaskL, 0x01
-    ldi bitmaskH, 0x00
     ; byteval = msg[i++]<<1 | (1<<0) | (1<<9)
     ld bytevalL, Z+
     ldi bytevalH, 0x00
@@ -118,6 +115,11 @@ sendbyte:
     adc bytevalH, bytevalH
     ori bytevalL, 0x01
     ori bytevalH, 0x02
+    ; bitidex = 10
+    ldi bitidx, 10
+    ; bitmask = 0x00001
+    ldi bitmaskL, 0x01
+    ldi bitmaskH, 0x00
 
 sendbit: ; 9 cycles per iteration + irsend
     ; irsend (byteval&bytemask)
@@ -127,7 +129,7 @@ sendbit: ; 9 cycles per iteration + irsend
     or  tmpreg1, tmpreg2
     irsend 
 
-    busywait (256-9-16)
+    delay_cycles (rx_bitcycles-irsend_cycles-9)
 
     ; bitmask <<= 1
     add bitmaskL, bitmaskL
