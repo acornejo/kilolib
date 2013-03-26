@@ -46,6 +46,7 @@ typedef enum {
     CHARGE,
     VOLTAGE,
     RUN,
+    READUID
 } message_type_t;
 
 /* Number of clock cycles per bit. */

@@ -38,7 +38,10 @@ static volatile enum {
     BATTERY,
     RUNNING,
     CHARGING,
+    READINGUID,
 } kilo_state;
+
+static uint8_t read_move;
 
 /**
  * Initialize all global variables to a known state.
@@ -155,6 +158,21 @@ void kilo_loop(void (*program)(void)) {
             case RUNNING:
                 program();
                 break;
+            case READINGUID:
+                switch(read_move) {
+                    case 0:
+                        set_motors(0,0);
+                        break;
+                    case 1:
+                        set_motors(0x70,0);
+                        break;
+                    case 2:
+                        set_motors(255,0);
+                        _delay_ms(20);
+                        read_move = 1;
+                        break;
+                }
+                break;
         }
     }
 }
@@ -168,7 +186,8 @@ void process_message(message_t *msg) {
         return;
     }
     set_color(RGB(0,0,0));
-    motors_off();
+    if (msg->type != READUID)
+        motors_off();
     switch (msg->type) {
         case BOOT:
             bootload();
@@ -191,6 +210,24 @@ void process_message(message_t *msg) {
         case RUN:
             motors_on();
             kilo_state = RUNNING;
+            break;
+        case READUID:
+            if (kilo_state != READINGUID) {
+                motors_on();
+                kilo_state = READINGUID;
+                if (kilo_uid&(1<<msg->data[0]))
+                    read_move = 2;
+                else
+                    read_move = 1;
+            } else {
+                if (kilo_uid&(1<<msg->data[0])) {
+                    if (read_move == 0)
+                        read_move = 2;
+                    else
+                        read_move = 1;
+                } else
+                    read_move = 0;
+            }
             break;
         default:
             break;
