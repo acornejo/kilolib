@@ -51,7 +51,7 @@ typedef enum {
 /* Number of clock cycles per bit. */
 #define rx_bitcycles 256
 /* Number of clock cycles for an entire message. */
-#define rx_msgcycles (10*rx_bitcycles*(sizeof(message_t)+1))
+#define rx_msgcycles (11*rx_bitcycles)
 /* Number of timer cycles between consecutive messages. */
 #define tx_period 3906
 

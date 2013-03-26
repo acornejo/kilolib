@@ -55,8 +55,9 @@ ISR(ANALOG_COMP_vect) {
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
         if (rx_leadingbyte) {
-            rx_dist.low_gain = ADCW;
             adc_trigger_sethigh();
+        } else if (rx_byteindex == 0) {
+            rx_dist.high_gain = ADCW;
         }
 	} else {
         // Stray bit received
@@ -73,7 +74,7 @@ ISR(ANALOG_COMP_vect) {
             } else {             // Stop bit received.
                 rx_leadingbit = 1;
                 if (rx_leadingbyte) {
-                    rx_dist.high_gain = ADCW;
+                    rx_dist.low_gain = ADCW;
                     adc_trigger_setlow();
                     if (rx_bytevalue != 0) { // Collision detected.
                         rx_timer_off();
