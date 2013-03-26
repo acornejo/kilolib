@@ -16,7 +16,6 @@ CFLAGS += -DF_CPU=8000000
 BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
 OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
 
-
 FLASH = -R .eeprom -R .fuse -R .lock -R .signature
 EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0  
 
@@ -31,9 +30,6 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 
 %.bin: %.elf
 	$(AVROC) -O binary $(FLASH) $< $@ 
-
-%.o: %.c
-	$(AVRCC) $(CFLAGS) -c -o $@ $<
 
 build:
 	mkdir -p $@
@@ -53,6 +49,9 @@ build/kilo-merged.hex: build/program.hex build/bootldr.hex
 
 program-ohc: build/ohc.hex
 	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
+
+program-boot: build/bootldr.hex
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
 
 program-kilo: build/kilo-merged.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
