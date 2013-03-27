@@ -218,7 +218,7 @@ void process_message(message_t *msg) {
                 if (kilo_uid&(1<<msg->data[0]))
                     read_move = 2;
                 else
-                    read_move = 1;
+                    read_move = 0;
             } else {
                 if (kilo_uid&(1<<msg->data[0])) {
                     if (read_move == 0)
