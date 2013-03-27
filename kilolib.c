@@ -12,6 +12,7 @@
 #define EEPROM_OSCCAL (uint8_t*)0x01
 #define EEPROM_TXMASK (uint8_t*)0x90
 #define EEPROM_UID    (uint8_t*)0xB0
+#define EEPROM_CCW_IN_PLACE (uint8_t*)0x08
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
@@ -40,8 +41,6 @@ static volatile enum {
     CHARGING,
     READINGUID,
 } kilo_state;
-
-static uint8_t read_move;
 
 /**
  * Initialize all global variables to a known state.
@@ -97,6 +96,8 @@ void wdt_init(void) {
 ISR(WDT_vect) {
     wdt_disable();
 }
+
+static uint8_t read_move;
 
 void kilo_loop(void (*program)(void)) {
     int16_t voltage;
@@ -164,7 +165,7 @@ void kilo_loop(void (*program)(void)) {
                         set_motors(0,0);
                         break;
                     case 1:
-                        set_motors(0x70,0);
+                        set_motors(eeprom_read_byte(EEPROM_CCW_IN_PLACE),0);
                         break;
                     case 2:
                         set_motors(255,0);
