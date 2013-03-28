@@ -12,7 +12,7 @@
 #define EEPROM_OSCCAL (uint8_t*)0x01
 #define EEPROM_TXMASK (uint8_t*)0x90
 #define EEPROM_UID    (uint8_t*)0xB0
-#define EEPROM_CCW_IN_PLACE (uint8_t*)0x08
+#define EEPROM_CCW_IN_PLACE (uint8_t*)0x09
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
@@ -165,10 +165,10 @@ void kilo_loop(void (*program)(void)) {
                         set_motors(0,0);
                         break;
                     case 1:
-                        set_motors(eeprom_read_byte(EEPROM_CCW_IN_PLACE),0);
+                        set_motors(0,eeprom_read_byte(EEPROM_CCW_IN_PLACE));
                         break;
                     case 2:
-                        set_motors(255,0);
+                        set_motors(0,255);
                         _delay_ms(20);
                         read_move = 1;
                         break;
@@ -216,19 +216,13 @@ void process_message(message_t *msg) {
             if (kilo_state != READINGUID) {
                 motors_on();
                 kilo_state = READINGUID;
-                if (kilo_uid&(1<<msg->data[0]))
-                    read_move = 2;
-                else
-                    read_move = 0;
-            } else {
-                if (kilo_uid&(1<<msg->data[0])) {
-                    if (read_move == 0)
-                        read_move = 2;
-                    else
-                        read_move = 1;
-                } else
-                    read_move = 0;
             }
+
+            if (kilo_uid&(1<<msg->data[0])) {
+                if (read_move == 0)
+                    read_move = 2;
+            } else
+                read_move = 0;
             break;
         default:
             break;
