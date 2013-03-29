@@ -17,11 +17,11 @@ typedef union {
                 uint8_t unused;
             } bootmsg;
             struct {
-                uint8_t id;
+                uint16_t id;
                 int16_t x;
                 int16_t y;
                 int8_t theta;
-                uint8_t unused[3];
+                uint16_t unused;
             } gpsmsg;
         };
         uint8_t type;
@@ -36,6 +36,7 @@ uint8_t message_send(message_t *);
 
 typedef enum {
     NORMAL = 0,
+    GPS,
     SPECIAL = 0x80,
     BOOT = 0x80,
     BOOTPGM_PAGE,

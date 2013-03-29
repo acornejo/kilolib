@@ -14,7 +14,8 @@ enum {
     PACKET_LEDTOGGLE,
     PACKET_FORWARDMSG,
     PACKET_FORWARDRAWMSG,
-    PACKET_BOOTPAGE
+    PACKET_BOOTPAGE,
+    PACKET_GPSFRAME
 };
 
 uint8_t packet_buffer[PACKET_SIZE];
@@ -116,6 +117,23 @@ int main() {
                 for (i = 0; i<SPM_PAGESIZE && !has_new_packet; i+=6) {
                     msg.bootmsg.page_offset = i/2;
                     memcpy(&msg.bootmsg.word1, new_packet+3+i, 6);
+                    msg.crc = message_crc(&msg);
+                    message_send(&msg);
+                }
+                sei();
+                green_port |= green_mask;
+                _delay_ms(10);
+                green_port &= ~green_mask;
+                _delay_ms(10);
+                break;
+            case PACKET_GPSFRAME:
+                msg.type = GPS;
+                msg.gpsmsg.unused = 0;
+                cli();
+                for (i = 2; i<PACKET_SIZE-7; i+=7) {
+                    memcpy(&msg.gpsmsg.id, new_packet+i, 7);
+                    if (msg.gpsmsg.id == 0)
+                        break;
                     msg.crc = message_crc(&msg);
                     message_send(&msg);
                 }

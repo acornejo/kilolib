@@ -273,7 +273,6 @@ int16_t get_ambientlight() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
-        /* while ((ADCSRA&(1<<ADIF))==0); */
         light = ADCW;                             // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
@@ -290,7 +289,7 @@ int16_t get_voltage() {
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
-        voltage = ADCW*3/2;                       // store AD result
+        voltage = ADCW;                           // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
 	}
@@ -329,7 +328,6 @@ void set_color(uint8_t rgb) {
 		DDRC |= (1<<4);
 	else
 		DDRC &= ~(1<<4);
-
 }
 
 #include "interrupts.h"
