@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "ringbuffer.h"
 
 #ifdef NONBLOCKING
-RB_create(debug_buffer, char, 511);
+#include "ringbuffer.h"
+RB_create(debug_buffer, char, 128);
 
 static int debug_putchar(char c, FILE *stream) {
     if (RB_full(debug_buffer)) {
@@ -34,6 +34,7 @@ ISR(USART_UDRE_vect) {
 #define debug_init_extra() {\
     RB_init(debug_buffer);\
 }
+
 #else
 static int debug_putchar(char c, FILE *stream) {
     UDR0 = c;

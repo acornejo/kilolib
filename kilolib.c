@@ -178,12 +178,11 @@ void kilo_loop(void (*program)(void)) {
     }
 }
 
+void rxbuffer_push(message_t *msg, distance_measurement_t *dist);
+
 void process_message(message_t *msg) {
     if (msg->type < SPECIAL) {
-        RB_back(rxbuffer) = *msg;
-        RB_pushback(rxbuffer);
-        RB_back(rxdistbuffer) = rx_dist;
-        RB_pushback(rxdistbuffer);
+        rxbuffer_push(msg, &rx_dist);
         return;
     }
     set_color(RGB(0,0,0));
@@ -232,27 +231,48 @@ void process_message(message_t *msg) {
 void txbuffer_push(message_t *msg)  {
     msg->type = NORMAL;
     msg->crc = message_crc(msg);
+    uint8_t sreg = SREG;
     cli();
     RB_back(txbuffer) = *msg;
     RB_pushback(txbuffer);
-    sei();
+    SREG = sreg;
+}
+
+message_t *txbuffer_peek() {
+    if (RB_empty(txbuffer))
+        return '\0';
+    return (message_t*)&RB_front(txbuffer);
+}
+
+void txbuffer_pop() {
+    RB_popfront(txbuffer);
 }
 
 uint8_t txbuffer_size() {
     return RB_size(txbuffer);
 }
 
-uint8_t rxbuffer_peek_type() {
-    return RB_front(rxbuffer).type;
+message_t *rxbuffer_peek() {
+    if (RB_empty(rxbuffer))
+        return '\0';
+    return (message_t*)&RB_front(rxbuffer);
 }
 
 void rxbuffer_pop(message_t *msg, distance_measurement_t *dist) {
+    uint8_t sreg = SREG;
     cli();
     *msg = RB_front(rxbuffer);
     RB_popfront(rxbuffer);
     *dist = RB_front(rxdistbuffer);
     RB_popfront(rxdistbuffer);
-    sei();
+    SREG = sreg;
+}
+
+void rxbuffer_push(message_t *msg, distance_measurement_t *dist) {
+    RB_back(rxbuffer) = *msg;
+    RB_pushback(rxbuffer);
+    RB_back(rxdistbuffer) = rx_dist;
+    RB_pushback(rxdistbuffer);
 }
 
 uint8_t rxbuffer_size() {

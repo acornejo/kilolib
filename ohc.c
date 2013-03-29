@@ -4,7 +4,6 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include "message.h"
-#include "ringbuffer.h"
 
 // 01010101
 #define PACKET_HEADER 0x55

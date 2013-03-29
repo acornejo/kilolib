@@ -15,10 +15,10 @@ ISR(TIMER0_COMPA_vect) {
 	OCR0A = tx_increment;
     kilo_ticks++;
 
-	if(!rx_busy && tx_clock>tx_period && !RB_empty(txbuffer)) {
-        message_t *msg = (message_t*)&RB_front(txbuffer);
+    message_t *msg = txbuffer_peek();
+	if(!rx_busy && tx_clock>tx_period && msg != '\0') {
         if (message_send(msg)) {
-            RB_popfront(txbuffer);
+            txbuffer_pop();
             tx_clock = 0;
         } else {
             tx_increment = rand()&0xFF;
