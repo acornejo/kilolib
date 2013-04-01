@@ -215,6 +215,7 @@ void process_message(message_t *msg) {
             if (kilo_state != READINGUID) {
                 motors_on();
                 kilo_state = READINGUID;
+                read_move = 0;
             }
 
             if (kilo_uid&(1<<msg->data[0])) {
