@@ -58,7 +58,7 @@ int main() {
     UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
     sei();
 
-    tx_maskon = ir_mask;
+    tx_mask = ir_mask;
 
 	// Use LEDs to flash power on indicator signal.
     uint8_t i;

@@ -59,7 +59,7 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     message_tx = mtx;
     message_tx_success = mtxsuccess;
     OSCCAL = eeprom_read_byte(EEPROM_OSCCAL);
-	tx_maskon = eeprom_read_byte(EEPROM_TXMASK);
+	tx_mask = eeprom_read_byte(EEPROM_TXMASK);
     tx_clock = 0;
     tx_increment = 255;
     rx_busy = 0;

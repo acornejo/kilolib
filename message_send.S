@@ -19,12 +19,12 @@
 #define bitidx   r25
 #define ddrreg   r26
 
-.extern tx_maskon
+.extern tx_mask
 
 .section .text
 
 .macro irsend
-    lds tmpreg2, tx_maskon;  1
+    lds tmpreg2, tx_mask;  1
     cpi tmpreg1, 0        ;  1
     breq 1f               ;  2
     nop             
@@ -76,8 +76,8 @@ message_send:
     ; ddreg = IR_DDR
     in  ddrreg,  IR_DDR
 
-    ; IR_DDR |= tx_maskon
-    lds tmpreg1, tx_maskon
+    ; IR_DDR |= tx_mask
+    lds tmpreg1, tx_mask
     or tmpreg1, ddrreg
     out IR_DDR, tmpreg1
 
