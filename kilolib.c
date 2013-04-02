@@ -228,12 +228,12 @@ void set_motors(uint8_t ccw, uint8_t cw) {
 int16_t get_ambientlight() {
     int16_t light = -1;
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
+		while ((ADCSRA&(1<<ADSC)));               // wait until previous AD conversion is done
 		cli();                                    // disable interrupts
 		ADMUX = 7;                                // select ADC source
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
-		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+		while ((ADCSRA&(1<<ADSC)));               // wait until AD conversion is done
         light = ADCW;                             // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
@@ -244,12 +244,12 @@ int16_t get_ambientlight() {
 int16_t get_voltage() {
     int16_t voltage=-1;
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC))==1);            // wait until previous AD conversion is done
+		while ((ADCSRA&(1<<ADSC)));            // wait until previous AD conversion is done
 		cli();                                    // disable interrupts
 		ADMUX = 6;                                // select ADC source
 		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
-		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
+		while ((ADCSRA&(1<<ADSC)));            // wait until AD conversion is done
         voltage = ADCW;                           // store AD result
 //        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts

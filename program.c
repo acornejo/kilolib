@@ -2,17 +2,20 @@
 #include <util/delay.h>
 
 /***
- * User message transmition and reception is handled by the next three
- * functions.
+ * Message transmition and reception between kilobots is handled by the
+ * next three functions.
  *
  * These functions are called within the interrupts that handle kilobot
- * communication. Hence, all interrupts will be disabled while these
- * functions are being executed.
+ * communication. It is important to remember that interrupts will be
+ * disabled while these functions are being executed.
  *
- * For this reason, to ensure a correct behavior of the kilobot
+ * For this reason, and to ensure a correct behavior of the kilobot
  * communication system, it is of utmost importance that these functions
- * do not perform any complex computations and have as little logic and
- * loops as possible (if possible, none at all).
+ * have as little logic and loops as possible (preferably, none at all).
+ *
+ * An alternative buffered interface for kilobot communication is
+ * provided in message_buffered.h. To avoid problems we recommend using
+ * the buffered interface whenever possible.
  */
 
 message_t txmsg, rxmsg;
@@ -44,7 +47,7 @@ void program_loop() {
     // read ambient light sensor
     int16_t light = get_ambientlight();
 
-    if (light < 300) { // if dark
+    if (light < 500) { // if dark
         // blink led blue
         set_color(RGB(0,0,1));
         _delay_ms(200);

@@ -7,7 +7,7 @@
 #define is_charging()       ((PIND&(1<<0)) == 0)
 
 #define acomp_setup() {\
-	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); /* trigger interrupt on rising output edge */\
+	ACSR = (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); /* trigger interrupt on rising output edge */\
 	DIDR1 = 3;\
 }
 
