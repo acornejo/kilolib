@@ -17,14 +17,9 @@ typedef struct {
     int16_t high_gain;
 } distance_measurement_t;
 
-void process_message(message_t *);
+typedef void (*message_rx_t)(message_t *, distance_measurement_t *d);
+typedef message_t *(*message_tx_t)(void);
+typedef void (*message_tx_success_t)(void);
 
-void txbuffer_push(message_t *);
-uint8_t txbuffer_size();
-
-message_t *rxbuffer_peek();
-void rxbuffer_pop(message_t *, distance_measurement_t *d);
-uint8_t rxbuffer_size();
-
-void kilo_init();
+void kilo_init(message_rx_t, message_tx_t, message_tx_success_t);
 void kilo_loop(void (*program)(void));

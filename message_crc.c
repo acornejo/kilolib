@@ -1,5 +1,5 @@
 #include "message.h"
-#include <util/crc16.h>
+#include <util/crc16.h>  // for optimized crc routines
 
 uint16_t message_crc(message_t *msg) {
     uint8_t i;

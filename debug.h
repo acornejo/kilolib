@@ -50,7 +50,7 @@ static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WR
 
 inline void debug_init() {
     cli();
-	DDRD |= (1<<1);                                 // Set UART TxD pin as output
+    DDRD |= (1<<1);                                 // Set UART TxD pin as output
 #define BAUD 76800
 #include <util/setbaud.h>
     UBRR0 = UBRR_VALUE;
@@ -59,8 +59,8 @@ inline void debug_init() {
 #else
     UCSR0A &= ~(1<<U2X0);
 #endif
-	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
-	UCSR0B |= (1<<TXEN0);                           // Enable transmission
+    UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
+    UCSR0B |= (1<<TXEN0);                           // Enable transmission
     debug_init_extra();
     stdout = &debug_stdout;
     sei();

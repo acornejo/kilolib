@@ -6,6 +6,11 @@
 #define acomp_off()         ACSR &= ~(1<<ACIE)
 #define is_charging()       ((PIND&(1<<0)) == 0)
 
+#define acomp_setup() {\
+	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); /* trigger interrupt on rising output edge */\
+	DIDR1 = 3;\
+}
+
 #define adc_setup() {\
     ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);\
     ADCSRA |= (1<<ADSC);\

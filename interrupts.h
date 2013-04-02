@@ -15,14 +15,16 @@ ISR(TIMER0_COMPA_vect) {
 	OCR0A = tx_increment;
     kilo_ticks++;
 
-    message_t *msg = txbuffer_peek();
-	if(!rx_busy && tx_clock>tx_period && msg != '\0') {
-        if (message_send(msg)) {
-            txbuffer_pop();
-            tx_clock = 0;
-        } else {
-            tx_increment = rand()&0xFF;
-            OCR0A = tx_increment;
+	if(!rx_busy && tx_clock>tx_period) {
+        message_t *msg = message_tx();
+        if (msg) {
+            if (message_send(msg)) {
+                message_tx_success();
+                tx_clock = 0;
+            } else {
+                tx_increment = rand()&0xFF;
+                OCR0A = tx_increment;
+            }
         }
     }
 }
@@ -93,7 +95,7 @@ ISR(ANALOG_COMP_vect) {
                         rx_busy = 0;
 
                         if (rx_msg.crc == message_crc(&rx_msg))
-                            process_message(&rx_msg);
+                            process_message();
                     }
                 }
             }

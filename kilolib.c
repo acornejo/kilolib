@@ -6,7 +6,6 @@
 #include <util/delay.h>
 
 #include "kilolib.h"
-#include "ringbuffer.h"
 #include "macros.h"
 
 #define EEPROM_OSCCAL (uint8_t*)0x01
@@ -18,10 +17,9 @@ typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
 AddressPointer_t bootload = (AddressPointer_t)0x7000;
 
-// ring buffers for input/output messages
-volatile RB_create(txbuffer, message_t, 4);
-volatile RB_create(rxbuffer, message_t, 4);
-volatile RB_create(rxdistbuffer, distance_measurement_t, 4);
+static message_rx_t message_rx = 0;
+static message_tx_t message_tx = 0;
+static message_tx_success_t message_tx_success = 0;
 
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
@@ -46,25 +44,20 @@ static volatile enum {
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
  */
-void kilo_init() {
+void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsuccess) {
     cli();
     ports_off();
     ports_on();
     tx_timer_setup();
     rx_timer_setup();
     motors_setup();
-
-	// initalize analog comparator
-	ACSR |= (1<<ACIE)|(1<<ACIS1)|(1<<ACIS0); //trigger interrupt on rising output edge
-	DIDR1 = 3;
-
-	// initalize adc
+    acomp_setup();
     adc_setup();
     adc_trigger_setlow();          // set AD to measure low gain
 
-    RB_init(txbuffer);
-    RB_init(rxbuffer);
-    RB_init(rxdistbuffer);
+    message_rx = mrx;
+    message_tx = mtx;
+    message_tx_success = mtxsuccess;
     OSCCAL = eeprom_read_byte(EEPROM_OSCCAL);
 	tx_maskon = eeprom_read_byte(EEPROM_TXMASK);
     tx_clock = 0;
@@ -139,11 +132,11 @@ void kilo_loop(void (*program)(void)) {
                 break;
             case BATTERY:
                 voltage = get_voltage();
-				if(voltage > 400)
+				if(voltage > 682)
 					set_color(RGB(0,3,0));
-				else if(voltage > 390)
+				else if(voltage > 648)
 					set_color(RGB(0,0,3));
-				else if(voltage > 350)
+				else if(voltage > 614)
 					set_color(RGB(3,3,0));
 				else
 					set_color(RGB(3,0,0));
@@ -178,17 +171,15 @@ void kilo_loop(void (*program)(void)) {
     }
 }
 
-void rxbuffer_push(message_t *msg, distance_measurement_t *dist);
-
-void process_message(message_t *msg) {
-    if (msg->type < SPECIAL) {
-        rxbuffer_push(msg, &rx_dist);
+inline void process_message() {
+    if (rx_msg.type < SPECIAL) {
+        message_rx(&rx_msg, &rx_dist);
         return;
     }
     set_color(RGB(0,0,0));
-    if (msg->type != READUID)
+    if (rx_msg.type != READUID)
         motors_off();
-    switch (msg->type) {
+    switch (rx_msg.type) {
         case BOOT:
             bootload();
             break;
@@ -218,7 +209,7 @@ void process_message(message_t *msg) {
                 read_move = 0;
             }
 
-            if (kilo_uid&(1<<msg->data[0])) {
+            if (kilo_uid&(1<<rx_msg.data[0])) {
                 if (read_move == 0)
                     read_move = 2;
             } else
@@ -227,57 +218,6 @@ void process_message(message_t *msg) {
         default:
             break;
     }
-}
-
-void txbuffer_push(message_t *msg)  {
-    msg->type = NORMAL;
-    msg->crc = message_crc(msg);
-    uint8_t sreg = SREG;
-    cli();
-    RB_back(txbuffer) = *msg;
-    RB_pushback(txbuffer);
-    SREG = sreg;
-}
-
-message_t *txbuffer_peek() {
-    if (RB_empty(txbuffer))
-        return '\0';
-    return (message_t*)&RB_front(txbuffer);
-}
-
-void txbuffer_pop() {
-    RB_popfront(txbuffer);
-}
-
-uint8_t txbuffer_size() {
-    return RB_size(txbuffer);
-}
-
-message_t *rxbuffer_peek() {
-    if (RB_empty(rxbuffer))
-        return '\0';
-    return (message_t*)&RB_front(rxbuffer);
-}
-
-void rxbuffer_pop(message_t *msg, distance_measurement_t *dist) {
-    uint8_t sreg = SREG;
-    cli();
-    *msg = RB_front(rxbuffer);
-    RB_popfront(rxbuffer);
-    *dist = RB_front(rxdistbuffer);
-    RB_popfront(rxdistbuffer);
-    SREG = sreg;
-}
-
-void rxbuffer_push(message_t *msg, distance_measurement_t *dist) {
-    RB_back(rxbuffer) = *msg;
-    RB_pushback(rxbuffer);
-    RB_back(rxdistbuffer) = rx_dist;
-    RB_pushback(rxdistbuffer);
-}
-
-uint8_t rxbuffer_size() {
-    return RB_size(rxbuffer);
 }
 
 void set_motors(uint8_t ccw, uint8_t cw) {
@@ -311,10 +251,16 @@ int16_t get_voltage() {
 		ADCSRA |= (1<<ADSC);                      // start AD conversion
 		while ((ADCSRA&(1<<ADSC))==1);            // wait until AD conversion is done
         voltage = ADCW;                           // store AD result
-        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+//        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
 	}
     return voltage;
+}
+
+#else
+
+inline void process_message() {
+    message_rx(&rx_msg, &rx_dist);
 }
 
 #endif

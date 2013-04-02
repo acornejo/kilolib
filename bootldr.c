@@ -1,9 +1,9 @@
 #include "kilolib.h"
 #include "bitfield.h"
-#include <avr/io.h>
-#include <avr/boot.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
+#include <avr/interrupt.h>  // for cli/sei
+#include <avr/io.h>         // for port and register definitions
+#include <avr/boot.h>       // to write boot pages
+#include <util/delay.h>     // for delay_ms
 
 uint8_t  page_total;
 uint8_t  page_count;
@@ -18,7 +18,7 @@ void goto_program() {
     asm volatile ("jmp 0x0000");
 }
 
-void process_message(message_t *msg) {
+void message_rx(message_t *msg, distance_measurement_t *dist) {
     if (msg->type == BOOTPGM_PAGE) {
         if (page_address != msg->bootmsg.page_address) {
             page_address = msg->bootmsg.page_address;
@@ -71,9 +71,9 @@ void process_message(message_t *msg) {
 
 int main() {
     cli();
-	// move interrupt vectors to bootloader interupts
-	MCUCR = (1<<IVCE);
-	MCUCR = (1<<IVSEL);
+    // move interrupt vectors to bootloader interupts
+    MCUCR = (1<<IVCE);
+    MCUCR = (1<<IVSEL);
     // initalize variables
     BF_init(page_table);
     page_total = 220;
@@ -82,7 +82,7 @@ int main() {
     page_byte_count = 0;
     sei();
     // initialize hardware
-    kilo_init();
+    kilo_init(message_rx, 0, 0);
 
     // flash blue led
     while(1) {

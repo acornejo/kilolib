@@ -1,8 +1,7 @@
-#include <avr/io.h>
-#include <string.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
-#include <avr/pgmspace.h>
+#include <avr/io.h>        // for port and register definitions
+#include <avr/interrupt.h> // for ISR
+#include <util/delay.h>    // for _delay_ms
+#include <string.h>        // for memcpy
 #include "message.h"
 
 // 01010101
@@ -34,6 +33,7 @@ message_t msg;
 #define green_mask (1<<1)
 
 int main() {
+    cli();
     // Set port outputs
     DDRB = (1<<1)|(1<<2);         // enable green led & blue led
     DDRD = (1<<2)|(1<<3);         // enable ir led & blue led
@@ -42,11 +42,10 @@ int main() {
     // turn off analog comparator (to avoid detecting collisions)
     ACSR |= (1<<ACD);
 
-	//move interrupt vectors to bootloader interupts
-	MCUCR = (1<<IVCE);
-	MCUCR = (1<<IVSEL);
+    //move interrupt vectors to bootloader interupts
+    MCUCR = (1<<IVCE);
+    MCUCR = (1<<IVSEL);
 
-	cli();
 #define BAUD 76800
 #include <util/setbaud.h>
     UBRR0 = UBRR_VALUE;
@@ -55,9 +54,9 @@ int main() {
 #else
     UCSR0A &= ~(1<<U2X0);
 #endif
-	UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
-	UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
-	sei();
+    UCSR0C |= (1<<UCSZ01)|(1<<UCSZ00);              // No parity, 8 bits comm, 1 stop bit
+    UCSR0B |= (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);    // Enable reception, transmission, and reception interrupts
+    sei();
 
     tx_maskon = ir_mask;
 
