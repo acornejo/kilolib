@@ -1,5 +1,6 @@
 #include "kilolib.h"
 #include <util/delay.h>
+#include "message_buffered.h"
 
 message_t msg;
 distance_measurement_t dist;
@@ -59,7 +60,7 @@ void program_loop() {
 }
 
 int main() {
-    kilo_init();
+    kilo_init_buffered();
     kilo_loop(program_loop);
 
     return 0;
