@@ -264,7 +264,7 @@ ISR(TIMER0_COMPA_vect) {
 	OCR0A = tx_increment;
     kilo_ticks++;
 
-	if(!rx_busy && tx_clock>tx_period) {
+	if(!rx_busy && tx_clock>tx_period && kilo_state == RUNNING) {
         message_t *msg = message_tx();
         if (msg) {
             if (message_send(msg)) {
