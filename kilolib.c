@@ -1,9 +1,10 @@
-#include <avr/io.h>
-#include <avr/wdt.h>
-#include <avr/interrupt.h>
-#include <avr/eeprom.h>
-#include <avr/sleep.h>
-#include <util/delay.h>
+#include <avr/io.h>         // io port and addresses
+#include <avr/wdt.h>        // watch dog timer
+#include <avr/interrupt.h>  // interrupt handling
+#include <avr/eeprom.h>     // read eeprom values
+#include <avr/sleep.h>      // enter powersaving sleep mode
+#include <util/delay.h>     // delay macros
+#include <stdlib.h>         // for rand()
 
 #include "kilolib.h"
 #include "macros.h"
@@ -228,12 +229,10 @@ void set_motors(uint8_t ccw, uint8_t cw) {
 int16_t get_ambientlight() {
     int16_t light = -1;
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC)));               // wait until previous AD conversion is done
-		cli();                                    // disable interrupts
-		ADMUX = 7;                                // select ADC source
-		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
-		ADCSRA |= (1<<ADSC);                      // start AD conversion
-		while ((ADCSRA&(1<<ADSC)));               // wait until AD conversion is done
+		cli();
+        adc_setup_conversion(7);
+        adc_start_conversion();
+        adc_finish_conversion();
         light = ADCW;                             // store AD result
         adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
@@ -244,12 +243,10 @@ int16_t get_ambientlight() {
 int16_t get_voltage() {
     int16_t voltage=-1;
 	if (!rx_busy) {
-		while ((ADCSRA&(1<<ADSC)));            // wait until previous AD conversion is done
 		cli();                                    // disable interrupts
-		ADMUX = 6;                                // select ADC source
-		ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0); // enable ADC and set prescalar
-		ADCSRA |= (1<<ADSC);                      // start AD conversion
-		while ((ADCSRA&(1<<ADSC)));            // wait until AD conversion is done
+        adc_setup_conversion(6);
+        adc_start_conversion();
+        adc_finish_conversion();
         voltage = ADCW;                           // store AD result
 //        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
@@ -257,11 +254,37 @@ int16_t get_voltage() {
     return voltage;
 }
 
+/**
+ * Timer0 interrupt.
+ * Used to send messages every tx_period ticks.
+ */
+ISR(TIMER0_COMPA_vect) {
+	tx_clock += tx_increment;
+    tx_increment = 0xFF;
+	OCR0A = tx_increment;
+    kilo_ticks++;
+
+	if(!rx_busy && tx_clock>tx_period) {
+        message_t *msg = message_tx();
+        if (msg) {
+            if (message_send(msg)) {
+                message_tx_success();
+                tx_clock = 0;
+            } else {
+                tx_increment = rand()&0xFF;
+                OCR0A = tx_increment;
+            }
+        }
+    }
+}
+
 #else
 
 inline void process_message() {
     message_rx(&rx_msg, &rx_dist);
 }
+
+EMPTY_INTERRUPT(TIMER0_COMPA_vect)
 
 #endif
 
@@ -297,41 +320,9 @@ void set_color(uint8_t rgb) {
 		DDRC &= ~(1<<4);
 }
 
-#include <stdlib.h> // for rand()
-
-#ifdef BOOTLOADER // not required in bootloader
-
-EMPTY_INTERRUPT(TIMER0_COMPA_vect)
-
-#else
-/**
- * Timer0 interrupt.
- * Used to send messages every tx_period ticks.
- */
-ISR(TIMER0_COMPA_vect) {
-	tx_clock += tx_increment;
-    tx_increment = 0xFF;
-	OCR0A = tx_increment;
-    kilo_ticks++;
-
-	if(!rx_busy && tx_clock>tx_period) {
-        message_t *msg = message_tx();
-        if (msg) {
-            if (message_send(msg)) {
-                message_tx_success();
-                tx_clock = 0;
-            } else {
-                tx_increment = rand()&0xFF;
-                OCR0A = tx_increment;
-            }
-        }
-    }
-}
-
-#endif
 /**
  * Timer1 interrupt.
- * Triggered after every a message is received.
+ * Timeout which is trigerred if stop bit is not received.
  */
 ISR(TIMER1_COMPA_vect) {
     rx_timer_off();

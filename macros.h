@@ -11,11 +11,14 @@
 	DIDR1 = 3;\
 }
 
-#define adc_setup() {\
+#define adc_setup_conversion(CHANNEL) {\
+    ADMUX = CHANNEL;\
     ADCSRA = (1<<ADEN)|(1<<ADPS1)|(1<<ADPS0);\
-    ADCSRA |= (1<<ADSC);\
-    while ((ADCSRA&(1<<ADSC))==1);\
 }
+
+#define adc_start_conversion() ADCSRA |= (1<<ADSC)
+
+#define adc_finish_conversion() while ((ADCSRA&(1<<ADSC)))
 
 #define adc_trigger_setlow() {\
     ADMUX = 1;\
@@ -27,6 +30,12 @@
     ADMUX = 0;\
     ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);\
     ADCSRB = (1<<ADTS0);\
+}
+
+#define adc_setup() {\
+    adc_setup_conversion(6);\
+    adc_start_conversion();\
+    adc_finish_conversion();\
 }
 
 #define adc_trigger_stop() ADCSRA &= ~(1<<ADATE)

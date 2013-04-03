@@ -1,3 +1,4 @@
+#include "kilolib.h"
 #include "message.h"
 #include "ringbuffer.h"
 
@@ -12,18 +13,18 @@ RB_create(rxbuffer, message_t, RXBUFFER_SIZE);
 RB_create(rxdistbuffer, distance_measurement_t, RXBUFFER_SIZE);
 RB_create(txbuffer, message_t, TXBUFFER_SIZE);
 
-inline uint8_t rxbuffer_size() {
+uint8_t rxbuffer_size() {
     return RB_size(rxbuffer);
 }
 
-inline void rxbuffer_push(message_t *msg, distance_measurement_t *dist) {
+void rxbuffer_push(message_t *msg, distance_measurement_t *dist) {
     RB_back(rxbuffer) = *msg;
     RB_pushback(rxbuffer);
     RB_back(rxdistbuffer) = *dist;
     RB_pushback(rxdistbuffer);
 }
 
-inline message_t *rxbuffer_peek(distance_measurement_t *dist) {
+message_t *rxbuffer_peek(distance_measurement_t *dist) {
     if (RB_empty(rxbuffer))
         return '\0';
     else {
@@ -32,30 +33,30 @@ inline message_t *rxbuffer_peek(distance_measurement_t *dist) {
     }
 }
 
-inline void rxbuffer_pop() {
+void rxbuffer_pop() {
     if (!RB_empty(rxbuffer)) {
         RB_popfront(rxbuffer);
         RB_popfront(rxdistbuffer);
     }
 }
 
-inline uint8_t txbuffer_size() {
+uint8_t txbuffer_size() {
     return RB_size(txbuffer);
 }
 
-inline void txbuffer_push(message_t *msg) {
+void txbuffer_push(message_t *msg) {
     RB_back(txbuffer) = *msg;
     RB_pushback(txbuffer);
 }
 
-inline message_t *txbuffer_peek() {
+message_t *txbuffer_peek() {
     if (RB_empty(txbuffer))
         return '\0';
     else
         return &RB_front(txbuffer);
 }
 
-inline void txbuffer_pop() {
+void txbuffer_pop() {
     if (!RB_empty(rxbuffer))
         RB_popfront(txbuffer);
 }

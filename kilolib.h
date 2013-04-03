@@ -1,3 +1,6 @@
+#ifndef __KILOLIB_H__
+#define __KILOLIB_H__
+
 #include <stdint.h>
 #include "message.h"
 
@@ -23,3 +26,5 @@ typedef void (*message_tx_success_t)(void);
 
 void kilo_init(message_rx_t, message_tx_t, message_tx_success_t);
 void kilo_loop(void (*program)(void));
+
+#endif//__KILOLIB_H__
