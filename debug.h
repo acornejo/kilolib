@@ -48,7 +48,7 @@ static int debug_putchar(char c, FILE *stream) {
 
 static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE);
 
-inline void debug_init() {
+void debug_init() {
     cli();
     DDRD |= (1<<1);                                 // Set UART TxD pin as output
 #define BAUD 76800

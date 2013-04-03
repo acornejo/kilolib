@@ -297,4 +297,107 @@ void set_color(uint8_t rgb) {
 		DDRC &= ~(1<<4);
 }
 
-#include "interrupts.h"
+#include <stdlib.h> // for rand()
+
+#ifdef BOOTLOADER // not required in bootloader
+
+EMPTY_INTERRUPT(TIMER0_COMPA_vect)
+
+#else
+/**
+ * Timer0 interrupt.
+ * Used to send messages every tx_period ticks.
+ */
+ISR(TIMER0_COMPA_vect) {
+	tx_clock += tx_increment;
+    tx_increment = 0xFF;
+	OCR0A = tx_increment;
+    kilo_ticks++;
+
+	if(!rx_busy && tx_clock>tx_period) {
+        message_t *msg = message_tx();
+        if (msg) {
+            if (message_send(msg)) {
+                message_tx_success();
+                tx_clock = 0;
+            } else {
+                tx_increment = rand()&0xFF;
+                OCR0A = tx_increment;
+            }
+        }
+    }
+}
+
+#endif
+/**
+ * Timer1 interrupt.
+ * Triggered after every a message is received.
+ */
+ISR(TIMER1_COMPA_vect) {
+    rx_timer_off();
+    rx_leadingbit = 1;
+    rx_leadingbyte = 1;
+    rx_busy = 0;
+    adc_trigger_setlow();
+}
+
+/**
+ * Analog comparator trigger interrupt.
+ * Triggerred for incoming IR pulses (i.e. individual bits).
+ */
+ISR(ANALOG_COMP_vect) {
+	uint16_t timer = TCNT1;
+
+    rx_busy = 1;
+    adc_trigger_stop();
+
+	if(rx_leadingbit) {       // Start bit received.
+        rx_timer_on();
+        rx_bytevalue = 0;
+		rx_leadingbit = 0;
+        if (rx_leadingbyte) {
+            adc_trigger_sethigh();
+        } else if (rx_byteindex == 0) {
+            rx_dist.high_gain = ADCW;
+        }
+	} else {
+        // Stray bit received
+        if (timer <= rx_bitcycles/2 || timer >= rx_bitcycles*9+rx_bitcycles/2) {
+            rx_timer_off();
+            rx_leadingbit = 1;
+            rx_leadingbyte = 1;
+            rx_busy = 0;
+            adc_trigger_setlow();
+        } else {
+            uint8_t bitindex = (timer-rx_bitcycles/2)/rx_bitcycles;
+            if (bitindex <= 7) { // Data bit received.
+                rx_bytevalue |= (1<<bitindex);
+            } else {             // Stop bit received.
+                rx_leadingbit = 1;
+                if (rx_leadingbyte) {
+                    rx_dist.low_gain = ADCW;
+                    adc_trigger_setlow();
+                    if (rx_bytevalue != 0) { // Collision detected.
+                        rx_timer_off();
+                        rx_leadingbyte = 1;
+                        rx_busy = 0;
+                    } else {                // Leading byte received.
+                        rx_leadingbyte = 0;
+                        rx_byteindex = 0;
+                    }
+                } else {
+                    rx_msg.rawdata[rx_byteindex] = rx_bytevalue;
+                    rx_byteindex++;
+                    if (rx_byteindex == sizeof(message_t)) {
+                        rx_timer_off();
+                        rx_leadingbyte = 1;
+                        rx_busy = 0;
+
+                        if (rx_msg.crc == message_crc(&rx_msg))
+                            process_message();
+                    }
+                }
+            }
+        }
+	}
+}
