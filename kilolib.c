@@ -148,12 +148,14 @@ void kilo_loop(void (*program)(void)) {
 					_delay_ms(1);
 					set_color(RGB(0,0,0));
 					_delay_ms(200);
-                }
+                } else
+                    set_color(RGB(0,0,0));
                 break;
             case RUNNING:
                 program();
                 break;
             case READINGUID:
+                set_color(RGB(0,0,0));
                 switch(read_move) {
                     case 0:
                         set_motors(0,0);
@@ -177,8 +179,7 @@ inline void process_message() {
         message_rx(&rx_msg, &rx_dist);
         return;
     }
-    set_color(RGB(0,0,0));
-    if (rx_msg.type != READUID)
+    if (rx_msg.type != READUID && rx_msg.type != RUN)
         motors_off();
     switch (rx_msg.type) {
         case BOOT:
@@ -200,8 +201,10 @@ inline void process_message() {
             kilo_state = BATTERY;
             break;
         case RUN:
-            motors_on();
-            kilo_state = RUNNING;
+            if (kilo_state != RUNNING) {
+                motors_on();
+                kilo_state = RUNNING;
+            }
             break;
         case READUID:
             if (kilo_state != READINGUID) {
@@ -278,7 +281,7 @@ ISR(TIMER0_COMPA_vect) {
     }
 }
 
-#else
+#else// BOOTLOADER
 
 inline void process_message() {
     message_rx(&rx_msg, &rx_dist);
@@ -360,7 +363,8 @@ ISR(ANALOG_COMP_vect) {
             rx_busy = 0;
             adc_trigger_setlow();
         } else {
-            uint8_t bitindex = (timer-rx_bitcycles/2)/rx_bitcycles;
+            /* uint8_t bitindex = (timer-rx_bitcycles/2)/rx_bitcycles; */
+            uint8_t bitindex = ((uint32_t)(timer-rx_bitcycles/2)*244)>>16;
             if (bitindex <= 7) { // Data bit received.
                 rx_bytevalue |= (1<<bitindex);
             } else {             // Stop bit received.

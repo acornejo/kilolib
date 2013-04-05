@@ -9,6 +9,7 @@
 #define IR_DDR DDRB
 #endif
 
+#define sreg     r0
 #define tmpreg1  r18
 #define tmpreg2  r19
 #define bitmaskL r20
@@ -24,30 +25,30 @@
 .section .text
 
 .macro irsend
-    lds tmpreg2, tx_mask;  1
-    cpi tmpreg1, 0        ;  1
-    breq 1f               ;  2
-    nop             
-    in tmpreg1, IR_PORT   ;  1
-    or tmpreg1, tmpreg2   ;  1
-    out IR_PORT, tmpreg1  ;  1
-    rjmp 2f               ;  2
+    lds tmpreg2, tx_mask  ;  [1]
+    cpi tmpreg1, 0        ;  [2]
+    breq 1f               ;  [3]
+    nop                   ;  [4]
+    in tmpreg1, IR_PORT   ;  [5]
+    or tmpreg1, tmpreg2   ;  [6]
+    out IR_PORT, tmpreg1  ;  [7]
+    rjmp 2f               ;  [8]
 1:
-    nop                   ;  1
-    nop                   ;  1
-    nop                   ;  1
-    rjmp 2f               ;  2
+    nop                   ;  [5]
+    nop                   ;  [6]
+    nop                   ;  [7]
+    rjmp 2f               ;  [8]
 2:
-    nop                   ;  1
-    nop                   ;  1
-    nop                   ;  1
-    com tmpreg2           ;  1
-    in tmpreg1, IR_PORT   ;  1
-    and tmpreg1, tmpreg2  ;  1
-    out IR_PORT, tmpreg1  ;  1
+    nop                   ;  [10]
+    nop                   ;  [11]
+    nop                   ;  [12]
+    com tmpreg2           ;  [13]
+    in tmpreg1, IR_PORT   ;  [14]
+    and tmpreg1, tmpreg2  ;  [15]
+    out IR_PORT, tmpreg1  ;  [16]
 .endm                     ;  total = 16 cycles
 #define irsend_cycles 16
-#define rx_bitcycles  256
+#define rx_bitcycles  269
 
 .macro return retval
     ldi r24, \retval
@@ -73,6 +74,11 @@
 .global message_send
 
 message_send:
+    ; sreg = SREG
+    in sreg, SREG
+#ifndef OHC
+    cli
+#endif
     ; ddreg = IR_DDR
     in  ddrreg,  IR_DDR
 
@@ -83,10 +89,9 @@ message_send:
 
     ldi tmpreg1, 0x01
     irsend 
-
     delay_cycles (2*rx_bitcycles-irsend_cycles)
 
-    ldi tmpreg1, 224 ;; (256*7/8)
+    ldi tmpreg1, rx_bitcycles*7/8
 checkcollision:
     ; if (ACSR&(1<<ACO)) == 0 goto nocollision
     in tmpreg2, ACSR
@@ -94,6 +99,14 @@ checkcollision:
     rjmp nocollision
     ; IR_DDR = ddrreg
     out IR_DDR, ddrreg
+    ; IR_PORT &= ~(tx_mask)
+    lds tmpreg2, tx_mask
+    com tmpreg2
+    in tmpreg1, IR_PORT
+    and tmpreg1, tmpreg2
+    out IR_PORT, tmpreg1
+    ; restore interrupts
+    out SREG, sreg
     return 0
 nocollision:
     nop
@@ -102,7 +115,6 @@ nocollision:
 
     ldi tmpreg1, 0x01
     irsend 
-
     delay_cycles (rx_bitcycles-irsend_cycles)
 
     movw r30, r24     ; // copy msg pointer in r24:r25 to r30:r31
@@ -123,18 +135,19 @@ sendbyte:
     ldi bitmaskH, 0x00
 
 sendbit: ; 9 cycles per iteration + irsend
-    ; irsend (byteval&bytemask)
+    ; tmpreg = (byteval&bytemask)
     movw tmpreg1, bitmaskL
     and tmpreg1, bytevalL
     and tmpreg2, bytevalH
     or  tmpreg1, tmpreg2
+
+    ; irsend tmpreg
     irsend 
+    delay_cycles (rx_bitcycles-irsend_cycles-9)
 
     ; bitmask <<= 1
     add bitmaskL, bitmaskL
     adc bitmaskH, bitmaskH
-
-    delay_cycles (rx_bitcycles-irsend_cycles-9)
 
     ; if (bitidex--) goto sendbit
     dec bitidx
@@ -151,4 +164,14 @@ bytedone:
     out ACSR, tmpreg1
     ; IR_DDR = ddrreg
     out IR_DDR, ddrreg
+
+    ; IR_PORT &= ~(tx_mask)
+    lds tmpreg2, tx_mask
+    com tmpreg2
+    in tmpreg1, IR_PORT
+    and tmpreg1, tmpreg2
+    out IR_PORT, tmpreg1
+
+    ; SREG = sreg
+    out SREG, sreg
     return 1
