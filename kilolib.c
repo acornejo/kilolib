@@ -13,6 +13,8 @@
 #define EEPROM_TXMASK (uint8_t*)0x90
 #define EEPROM_UID    (uint8_t*)0xB0
 #define EEPROM_CCW_IN_PLACE (uint8_t*)0x09
+#define TX_MASK_MAX   ((1<<0)|(1<<1)|(1<<2)|(1<<6)|(1<<7))
+#define TX_MASK_MIN   ((1<<0))
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
@@ -59,8 +61,12 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     message_rx = mrx;
     message_tx = mtx;
     message_tx_success = mtxsuccess;
-    OSCCAL = eeprom_read_byte(EEPROM_OSCCAL);
+    uint8_t osccal = eeprom_read_byte(EEPROM_OSCCAL);
+    if (osccal != 0xFF)
+        OSCCAL = osccal;
 	tx_mask = eeprom_read_byte(EEPROM_TXMASK);
+    if (tx_mask & ~TX_MASK_MAX)
+        tx_mask = TX_MASK_MIN;
     tx_clock = 0;
     tx_increment = 255;
     rx_busy = 0;

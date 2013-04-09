@@ -1,3 +1,6 @@
+#ifndef __MESSAGE_BUFFERED_H__
+#define __MESSAGE_BUFFERED_H__
+
 #include "kilolib.h"
 #include "message.h"
 #include "ringbuffer.h"
@@ -66,3 +69,5 @@ inline void kilo_init_buffered() {
     RB_init(txbuffer);
     kilo_init(rxbuffer_push, txbuffer_peek, txbuffer_pop);
 }
+
+#endif//__MESSAGE_BUFFERED_H__
