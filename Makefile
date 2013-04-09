@@ -1,11 +1,13 @@
-all: ohc program bootldr
+all: ohc program bootldr 
 
-.PHONY: ohc program bootldr
+.PHONY: ohc program bootldr lib
+lib: build/kilolib.a
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
 program: build/program.elf build/program.hex build/program.lss
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 
-AVRCC = avr-gcc
+CC = avr-gcc
+AVRAR = avr-ar
 AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
@@ -13,6 +15,7 @@ AVRUP = avrdude
 PFLAGS = -P usb -c avrispmkII -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -O3 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
+ASFLAGS = $(CFLAGS)
 BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
 OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
 
@@ -34,14 +37,18 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 build:
 	mkdir -p $@
 
+build/kilolib.a: kilolib.o message_crc.o message_send.o | build
+	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o
+	rm -f *.o
+
 build/program.elf: program.c kilolib.c message_crc.c message_send.S | build
-	$(AVRCC) $(CFLAGS) -o $@ program.c kilolib.c message_crc.c message_send.S
+	$(CC) $(CFLAGS) -o $@ program.c kilolib.c message_crc.c message_send.S
 
 build/ohc.elf: ohc.c message_crc.c message_send.S | build
-	$(AVRCC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c message_crc.c message_send.S
+	$(CC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c message_crc.c message_send.S
 
 build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
-	$(AVRCC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
+	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
 build/kilo-merged.hex: build/program.hex build/bootldr.hex
 	cat build/program.hex | grep -v ":00000001FF" > $@
