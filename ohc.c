@@ -134,6 +134,7 @@ int main() {
                         break;
                     msg.crc = message_crc(&msg);
                     message_send(&msg);
+                    _delay_us(50);
                 }
                 sei();
                 green_port |= green_mask;
