@@ -129,7 +129,7 @@ int main() {
                 msg.gpsmsg.unused = 0;
                 cli();
                 for (i = 2; i<PACKET_SIZE-7; i+=7) {
-                    memcpy(&msg.gpsmsg.id, new_packet+i, 7);
+                    memcpy(&msg.gpsmsg, new_packet+i, 7);
                     if (msg.gpsmsg.id == 0)
                         break;
                     msg.crc = message_crc(&msg);

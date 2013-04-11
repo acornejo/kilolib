@@ -1,6 +1,9 @@
 #define __SFR_OFFSET 0
 #include <avr/io.h>
 
+#define rx_bitcycles  269
+#define irsend_cycles 16
+
 #ifdef OHC
 #define IR_PORT PORTD
 #define IR_DDR DDRD
@@ -47,8 +50,6 @@
     and tmpreg1, tmpreg2  ;  [15]
     out IR_PORT, tmpreg1  ;  [16]
 .endm                     ;  total = 16 cycles
-#define irsend_cycles 16
-#define rx_bitcycles  269
 
 .macro return retval
     ldi r24, \retval
@@ -74,6 +75,7 @@
 .global message_send
 
 message_send:
+    ; save interrupt state
     ; sreg = SREG
     in sreg, SREG
 #ifndef OHC
@@ -105,7 +107,8 @@ checkcollision:
     in tmpreg1, IR_PORT
     and tmpreg1, tmpreg2
     out IR_PORT, tmpreg1
-    ; restore interrupts
+    ; restore interrupt state
+    ; SREG = sreg
     out SREG, sreg
     return 0
 nocollision:
@@ -134,7 +137,8 @@ sendbyte:
     ldi bitmaskL, 0x01
     ldi bitmaskH, 0x00
 
-sendbit: ; 9 cycles per iteration + irsend
+    ; 9 cycles per iteration + irsend
+sendbit:
     ; tmpreg = (byteval&bytemask)
     movw tmpreg1, bitmaskL
     and tmpreg1, bytevalL
@@ -153,7 +157,6 @@ sendbit: ; 9 cycles per iteration + irsend
     dec bitidx
     brne sendbit
 
-bytedone:
     ; if (byteidx--) goto sendbyte
     dec byteidx
     brne sendbyte
@@ -172,6 +175,7 @@ bytedone:
     and tmpreg1, tmpreg2
     out IR_PORT, tmpreg1
 
+    ; restore interrupt state
     ; SREG = sreg
     out SREG, sreg
     return 1

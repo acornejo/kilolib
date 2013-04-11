@@ -16,6 +16,13 @@
 #define TX_MASK_MAX   ((1<<0)|(1<<1)|(1<<2)|(1<<6)|(1<<7))
 #define TX_MASK_MIN   ((1<<0))
 
+/* Number of clock cycles per bit. */
+#define rx_bitcycles 269
+/* Number of clock cycles for an entire message. */
+#define rx_msgcycles (11*rx_bitcycles)
+/* Number of timer cycles between consecutive messages. */
+#define tx_period 3906
+
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 AddressPointer_t reset = (AddressPointer_t)0x0000;
 AddressPointer_t bootload = (AddressPointer_t)0x7000;
