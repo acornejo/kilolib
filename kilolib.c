@@ -187,7 +187,7 @@ void kilo_loop(void (*program)(void)) {
     }
 }
 
-inline void process_message() {
+static inline void process_message() {
     if (rx_msg.type < SPECIAL) {
         message_rx(&rx_msg, &rx_dist);
         return;
@@ -297,7 +297,7 @@ ISR(TIMER0_COMPA_vect) {
 
 #else// BOOTLOADER
 
-inline void process_message() {
+static inline void process_message() {
     message_rx(&rx_msg, &rx_dist);
 }
 

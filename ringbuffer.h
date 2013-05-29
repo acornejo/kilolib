@@ -90,6 +90,24 @@
         o.count = o.count + 1;\
 }
 
+#define RB_begin(o) o.head
+
+#define RB_next(o,i) i = ((i+1)%o##_rbsize)
+
+#define RB_end(o)  ((o.head+o.count)%o##_rbsize)
+
+#if 0
+#define RB_begin(o) &o.elems[o.head]
+
+#define RB_next(o,i) {\
+    i++;\
+    if (i == &o.elems[o##_rbsize])\
+        i = &o.elems[0];\
+}
+
+#define RB_end(o)  &o.elems[(o.head+o.count)%o##_rbsize]
+#endif
+
 #endif
 
 #endif//__RINGBUFFER_H__
