@@ -196,6 +196,7 @@ inline void process_message() {
         motors_off();
     switch (rx_msg.type) {
         case BOOT:
+            tx_timer_off();
             bootload();
             break;
         case RESET:

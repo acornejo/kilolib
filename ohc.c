@@ -13,7 +13,8 @@ enum {
     PACKET_FORWARDMSG,
     PACKET_FORWARDRAWMSG,
     PACKET_BOOTPAGE,
-    PACKET_GPSFRAME
+    PACKET_GPSFRAME,
+    PACKET_FORWARDMSGSINGLE,
 };
 
 uint8_t packet_buffer[PACKET_SIZE];
@@ -95,6 +96,16 @@ int main() {
                     green_port &= ~green_mask;
                     _delay_ms(3);
                 }
+                break;
+            case PACKET_FORWARDMSGSINGLE:
+                for (i = 0; i<sizeof(message_t)-sizeof(msg.crc); i++)
+                    msg.rawdata[i] = new_packet[i+2];
+                msg.crc = message_crc(&msg);
+                message_send(&msg);
+                green_port |= green_mask;
+                _delay_ms(3);
+                green_port &= ~green_mask;
+                _delay_ms(3);
                 break;
             case PACKET_FORWARDRAWMSG:
                 for (i = 0; i<sizeof(message_t); i++)
