@@ -64,10 +64,6 @@ void debug_init() {
     debug_init_extra();
     stdout = &debug_stdout;
     sei();
-    // printf("\n");
-    // printf("+-----------------+\n");
-    // printf("| Kilobot Started |\n");
-    // printf("+-----------------+\n");
 }
 
 
