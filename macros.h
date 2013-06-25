@@ -1,5 +1,3 @@
-#define tx_timer_on()       TIMSK0 |= (1<<OCIE0A)
-#define tx_timer_off()      TIMSK0 &= ~(1<<OCIE0A)
 #define adc_on()            ADCSRA |= (1<<ADEN)
 #define adc_off()           ADCSRA &= ~(1<<ADEN)
 #define acomp_on()          ACSR |= (1<<ACIE)|(1<<ACI)
@@ -54,13 +52,6 @@
     PORTD |= (1<<2);\
 }
 
-#define tx_timer_setup() {\
-	TCCR0A = 0;\
-	TCCR0B = (1<<CS02)|(1<<CS00);\
-    OCR0A = 0xFF;\
-    TIMSK0 = (1<<OCIE0A);\
-}
-
 #define motors_setup() {\
     DDRD &= ~(1<<3);\
     DDRB &= ~(1<<3);\
@@ -84,19 +75,36 @@
     OCR2A = 0;\
 }
 
+#define tx_timer_setup() {\
+    TCCR0A = 0;\
+    TCCR0B = (1<<CS02)|(1<<CS00);   /* Set prescalar multiplier. */\
+    OCR0A = 0xFF;                   /* Set compare register to 255. */\
+    TIMSK0 = (1<<OCIE0A);           /* Enable timer1 interrupt. */\
+}
+
+#define tx_timer_on() {\
+    TCNT0 = 0;             /* reset count. */\
+    TIMSK0 |= (1<<OCIE0A); /* Enable timer1 interrupt. */\
+}
+
+#define tx_timer_off() {\
+    TIMSK0 &= ~(1<<OCIE0A); /* Disable timer1 interrupt. */\
+    TCNT0 = 0;              /* reset count. */\
+}
+
 #define rx_timer_setup() {\
     TCCR1A = 0;\
-    TCCR1B = 0;\
-    OCR1A = rx_msgcycles;\
-    TIMSK1 = (1<<OCIE1A); /* Interrupt enable on match output compare register A */\
+    TCCR1B = 0;             /* Set prescalar to 0 (disabled). */\
+    OCR1A = rx_msgcycles;   /* Set compare register to rx_msgcycles. */\
+    TIMSK1 = (1<<OCIE1A);   /* Interrupt enable on match output compare register A */\
 }
 
 #define rx_timer_on() {\
-    TCNT1 = 0;  /* reset count */ \
-    TCCR1B = 1; /* set prescalar to 1 (enabled). */\
+    TCNT1 = 0;              /* reset count */ \
+    TCCR1B = 1;             /* set prescalar to 1 (enabled). */\
 }
 
 #define rx_timer_off() {\
-    TCCR1B = 0; /* set prescalar to 0 (disabled). */ \
-    TCNT1 = 0;  /* reset count */ \
+    TCCR1B = 0;             /* set prescalar to 0 (disabled). */\
+    TCNT1 = 0;              /* reset count */\
 }
