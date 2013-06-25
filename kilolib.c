@@ -377,8 +377,11 @@ ISR(ANALOG_COMP_vect) {
             rx_busy = 0;
             adc_trigger_setlow();
         } else {
-            /* uint8_t bitindex = (timer-rx_bitcycles/2)/rx_bitcycles; */
-            uint8_t bitindex = ((uint32_t)(timer-rx_bitcycles/2)*244)>>16;
+            // NOTE: The following code avoids an expensive division
+            // which takes too many clock cycles and throws off the
+            // interrupt.
+            const uint16_t M = ((1L<<16)+rx_bitcycles-1)/rx_bitcycles;
+            uint8_t bitindex = ((uint32_t)(timer-rx_bitcycles/2)*M)>>16;
             if (bitindex <= 7) { // Data bit received.
                 rx_bytevalue |= (1<<bitindex);
             } else {             // Stop bit received.
