@@ -1,10 +1,11 @@
-all: ohc program bootldr 
+all: ohc bootldr blank demo
 
-.PHONY: ohc program bootldr lib
-lib: build/kilolib.a
+.PHONY: ohc bootldr demo blank
+KILOLIB = build/kilolib.a
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
-program: build/program.elf build/program.hex build/program.lss
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
+blank: build/blank.elf build/blank.hex build/blank.lss
+demo: build/demo.elf build/demo.hex build/demo.lss
 
 CC = avr-gcc
 AVRAR = avr-ar
@@ -22,6 +23,11 @@ OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
 FLASH = -R .eeprom -R .fuse -R .lock -R .signature
 EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0  
 
+define MERGE 
+	@cat $(1) | grep -v ":00000001FF" > $(3)
+	@cat $(2) >> $(3)
+endef
+
 %.lss: %.elf
 	$(AVROD) -d -S $< > $@
 
@@ -37,12 +43,15 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 build:
 	mkdir -p $@
 
-build/kilolib.a: kilolib.o message_crc.o message_send.o | build
-	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o
+$(KILOLIB): kilolib.o message_crc.o message_send.o beeps_lowlevel.o beeps.o | build
+	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o beeps_lowlevel.o beeps.o
 	rm -f *.o
 
-build/program.elf: program.c kilolib.c message_crc.c message_send.S | build
-	$(CC) $(CFLAGS) -o $@ program.c kilolib.c message_crc.c message_send.S
+build/demo.elf: demo.c $(KILOLIB) | build
+	$(CC) $(CFLAGS) -o $@ $< $(KILOLIB) 
+
+build/blank.elf: blank.c $(KILOLIB) | build
+	$(CC) $(CFLAGS) -o $@ $< $(KILOLIB) 
 
 build/ohc.elf: ohc.c message_crc.c message_send.S | build
 	$(CC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c message_crc.c message_send.S
@@ -50,18 +59,19 @@ build/ohc.elf: ohc.c message_crc.c message_send.S | build
 build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
 	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
-build/kilo-merged.hex: build/program.hex build/bootldr.hex
-	cat build/program.hex | grep -v ":00000001FF" > $@
-	cat build/bootldr.hex >> $@
-
 program-ohc: build/ohc.hex
 	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
 
 program-boot: build/bootldr.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
 
-program-kilo: build/kilo-merged.hex
-	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
+program-blank: build/blank.hex build/bootldr.hex
+	$(call MERGE, "build/blank.hex", "build/bootldr.hex", "build/merged-blank.hex")
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:build/merged-blank.hex:i"
+
+program-demo: build/demo.hex build/bootldr.hex
+	$(call MERGE, "build/demo.hex", "build/bootldr.hex", "build/merged-demo.hex")
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:build/merged-demo.hex:i"
 
 clean:
 	rm -fR build
