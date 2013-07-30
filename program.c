@@ -20,8 +20,8 @@
 
 message_t txmsg, rxmsg;
 distance_measurement_t rxdist;
-uint8_t txmsg_available = 0;
-uint8_t rxmsg_processed = 1;
+uint8_t txmsg_available;
+uint8_t rxmsg_processed;
 
 // Called when the messaging subsystem successfully decodes a message
 void message_rx(message_t *msg, distance_measurement_t *dist) {
@@ -88,6 +88,7 @@ void program_loop() {
 }
 
 int main() {
+    rxmsg_processed = 1;
     kilo_init(message_rx, message_tx, message_tx_success);
     kilo_loop(program_loop);
 

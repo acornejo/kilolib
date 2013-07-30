@@ -24,12 +24,11 @@
 #define tx_period 3906
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
-AddressPointer_t reset = (AddressPointer_t)0x0000;
-AddressPointer_t bootload = (AddressPointer_t)0x7000;
+AddressPointer_t reset, bootload;
 
-static message_rx_t message_rx = 0;
-static message_tx_t message_tx = 0;
-static message_tx_success_t message_tx_success = 0;
+message_rx_t message_rx;
+message_tx_t message_tx;
+message_tx_success_t message_tx_success;
 
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
@@ -65,6 +64,8 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     adc_setup();
     adc_trigger_setlow();          // set AD to measure low gain
 
+    reset = (AddressPointer_t)0x0000;
+    bootload = (AddressPointer_t)0x7000;
     message_rx = mrx;
     message_tx = mtx;
     message_tx_success = mtxsuccess;
