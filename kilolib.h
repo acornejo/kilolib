@@ -13,6 +13,7 @@ uint16_t kilo_uid;
 void set_motors(uint8_t, uint8_t);
 void set_color(uint8_t);
 int16_t get_voltage();
+int16_t get_temperature();
 int16_t get_ambientlight();
 
 typedef struct {

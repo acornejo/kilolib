@@ -51,7 +51,7 @@ void debug_init() {
     static FILE debug_stdout = FDEV_SETUP_STREAM(debug_putchar, NULL, _FDEV_SETUP_WRITE);
     cli();
     DDRD |= (1<<1);                                 // Set UART TxD pin as output
-#define BAUD 76800
+#define BAUD 38400
 #include <util/setbaud.h>
     UBRR0 = UBRR_VALUE;
 #if USE_2X

@@ -24,7 +24,6 @@
 #define tx_period 3906
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
-AddressPointer_t reset, bootload;
 
 message_rx_t message_rx;
 message_tx_t message_tx;
@@ -64,8 +63,6 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     adc_setup();
     adc_trigger_setlow();          // set AD to measure low gain
 
-    reset = (AddressPointer_t)0x0000;
-    bootload = (AddressPointer_t)0x7000;
     message_rx = mrx;
     message_tx = mtx;
     message_tx_success = mtxsuccess;
@@ -189,6 +186,8 @@ void kilo_loop(void (*program)(void)) {
 }
 
 static inline void process_message() {
+    AddressPointer_t reset = (AddressPointer_t)0x0000, bootload=(AddressPointer_t)0x7000;
+
     if (rx_msg.type < SPECIAL) {
         message_rx(&rx_msg, &rx_dist);
         return;
@@ -256,6 +255,20 @@ int16_t get_ambientlight() {
 		sei();                                    // reenable interrupts
 	}
     return light;
+}
+
+int16_t get_temperature() {
+    int16_t temp = -1;
+	if (!rx_busy) {
+		cli();
+        adc_setup_conversion(8);
+        adc_start_conversion();
+        adc_finish_conversion();
+        temp = ADCW;                             // store AD result
+        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+		sei();                                    // reenable interrupts
+	}
+    return temp;
 }
 
 int16_t get_voltage() {
