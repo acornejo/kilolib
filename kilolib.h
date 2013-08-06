@@ -27,5 +27,7 @@ typedef void (*message_tx_success_t)(void);
 
 void kilo_init(message_rx_t, message_tx_t, message_tx_success_t);
 void kilo_loop(void (*program)(void));
+void kilo_run();
+void kilo_reset();
 
 #endif//__KILOLIB_H__

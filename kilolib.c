@@ -185,6 +185,15 @@ void kilo_loop(void (*program)(void)) {
     }
 }
 
+void kilo_run() {
+    kilo_state = RUNNING;
+}
+
+void kilo_reset() {
+    AddressPointer_t reset= (AddressPointer_t)0x0000;
+    reset();
+}
+
 static inline void process_message() {
     AddressPointer_t reset = (AddressPointer_t)0x0000, bootload=(AddressPointer_t)0x7000;
 
@@ -261,7 +270,8 @@ int16_t get_temperature() {
     int16_t temp = -1;
 	if (!rx_busy) {
 		cli();
-        adc_setup_conversion(8);
+        ADMUX = (1<<3)|(1<<6)|(1<<7);
+        ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
         adc_start_conversion();
         adc_finish_conversion();
         temp = ADCW;                             // store AD result
