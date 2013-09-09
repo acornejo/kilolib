@@ -42,10 +42,10 @@ static int debug_putchar(char c, FILE *stream) {
     return 0;
 }
 
-static int debug_getchar(FILE *stream) {
-    while(!(UCSR0A & (1<<RXC0)));
-    return UDR0;
-}
+// static int debug_getchar(FILE *stream) {
+//     while(!(UCSR0A & (1<<RXC0)));
+//     return UDR0;
+// }
 
 #define debug_init_extra() {}
 
