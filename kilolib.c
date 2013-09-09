@@ -25,9 +25,10 @@
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 
-message_rx_t message_rx;
-message_tx_t message_tx;
-message_tx_success_t message_tx_success;
+static message_rx_t message_rx = 0;
+static message_tx_t message_tx = 0;
+static message_tx_success_t message_tx_success = 0;
+
 
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
@@ -196,8 +197,7 @@ void kilo_reset() {
 }
 
 static inline void process_message() {
-    AddressPointer_t reset = (AddressPointer_t)0x0000, bootload=(AddressPointer_t)0x7000;
-
+    AddressPointer_t reset = (AddressPointer_t)0x0000, bootload = (AddressPointer_t)0x7000;
     if (rx_msg.type < SPECIAL) {
         message_rx(&rx_msg, &rx_dist);
         return;
