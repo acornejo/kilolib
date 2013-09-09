@@ -90,6 +90,7 @@ void program_loop() {
 int main() {
     rxmsg_processed = 1;
     kilo_init(message_rx, message_tx, message_tx_success);
+    kilo_run();
     kilo_loop(program_loop);
 
     return 0;

@@ -44,8 +44,8 @@ endef
 build:
 	mkdir -p $@
 
-$(KILOLIB): kilolib.o message_crc.o message_send.o beeps_lowlevel.o beeps.o | build
-	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o beeps_lowlevel.o beeps.o
+$(KILOLIB): kilolib.o message_crc.o message_send.o | build
+	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o 
 	rm -f *.o
 
 build/demo.elf: demo.c $(KILOLIB) | build

@@ -186,6 +186,7 @@ void kilo_loop(void (*program)(void)) {
 }
 
 void kilo_run() {
+    motors_on();
     kilo_state = RUNNING;
 }
 
