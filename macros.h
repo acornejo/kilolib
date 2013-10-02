@@ -18,13 +18,13 @@
 
 #define adc_finish_conversion() while ((ADCSRA&(1<<ADSC)))
 
-#define adc_trigger_setlow() {\
+#define adc_trigger_low_gain() {\
     ADMUX = 1;\
     ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);\
     ADCSRB = (1<<ADTS0);\
 }
 
-#define adc_trigger_sethigh() {\
+#define adc_trigger_high_gain() {\
     ADMUX = 0;\
     ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADPS1)|(1<<ADPS0);\
     ADCSRB = (1<<ADTS0);\
