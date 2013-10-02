@@ -389,9 +389,8 @@ ISR(ANALOG_COMP_vect) {
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
         if (rx_leadingbyte) {
+            rx_dist.low_gain = ADCW;
             adc_trigger_sethigh();
-        } else if (rx_byteindex == 0) {
-            rx_dist.high_gain = ADCW;
         }
 	} else {
         // Stray bit received
@@ -402,9 +401,8 @@ ISR(ANALOG_COMP_vect) {
             rx_busy = 0;
             adc_trigger_setlow();
         } else {
-            // NOTE: The following code avoids an expensive division
-            // which takes too many clock cycles and throws off the
-            // interrupt.
+            // NOTE: The following code avoids a division which takes
+            // too many clock cycles and throws off the interrupt.
             const uint16_t M = ((1L<<16)+rx_bitcycles-1)/rx_bitcycles;
             uint8_t bitindex = ((uint32_t)(timer-rx_bitcycles/2)*M)>>16;
             if (bitindex <= 7) { // Data bit received.
@@ -412,7 +410,7 @@ ISR(ANALOG_COMP_vect) {
             } else {             // Stop bit received.
                 rx_leadingbit = 1;
                 if (rx_leadingbyte) {
-                    rx_dist.low_gain = ADCW;
+                    rx_dist.high_gain = ADCW;
                     adc_trigger_setlow();
                     if (rx_bytevalue != 0) { // Collision detected.
                         rx_timer_off();

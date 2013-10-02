@@ -13,8 +13,8 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
-PFLAGS = -P /dev/ttyACM0 -c avrisp2 -U
-PFLAGS2 = -P usb -c avrispmkII -U
+# PFLAGS = -P /dev/ttyACM0 -c avrisp2 -U
+PFLAGS = -P usb -c avrispmkII -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -O3 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 ASFLAGS = $(CFLAGS)
