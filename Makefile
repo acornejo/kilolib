@@ -13,8 +13,8 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
-PFLAGS = -P /dev/ttyACM0 -c avrisp2 -U
-PFLAGS2 = -P usb -c avrispmkII -U
+PFLAGS2 = -P /dev/ttyACM0 -c avrisp2 -U
+PFLAGS = -P usb -c avrispmkII -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -O3 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 ASFLAGS = $(CFLAGS)
@@ -61,7 +61,7 @@ build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
 	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
 program-ohc: build/ohc.hex
-	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
+	$(AVRUP) -p m328p  $(PFLAGS) "flash:w:$<:i"
 
 program-boot: build/bootldr.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
