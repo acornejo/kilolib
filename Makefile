@@ -1,11 +1,10 @@
-all: ohc bootldr blank demo
+all: ohc bootldr blank 
 
-.PHONY: ohc bootldr demo blank
+.PHONY: ohc bootldr blank
 KILOLIB = build/kilolib.a
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 blank: build/blank.elf build/blank.hex build/blank.lss
-demo: build/demo.elf build/demo.hex build/demo.lss
 
 CC = avr-gcc
 AVRAR = avr-ar
@@ -47,9 +46,6 @@ build:
 $(KILOLIB): kilolib.o message_crc.o message_send.o | build
 	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o 
 	rm -f *.o
-
-build/demo.elf: demo.c $(KILOLIB) | build
-	$(CC) $(CFLAGS) -o $@ $< $(KILOLIB) 
 
 build/blank.elf: blank.c $(KILOLIB) | build
 	$(CC) $(CFLAGS) -o $@ $< $(KILOLIB) 

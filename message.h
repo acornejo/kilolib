@@ -30,6 +30,7 @@ typedef union {
 } message_t;
 
 volatile uint8_t tx_mask;
+volatile uint16_t tx_period;
 
 uint16_t message_crc(message_t *);
 uint8_t message_send(message_t *);

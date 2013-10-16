@@ -20,8 +20,6 @@
 #define rx_bitcycles 269
 /* Number of clock cycles for an entire message. */
 #define rx_msgcycles (11*rx_bitcycles)
-/* Number of timer cycles between consecutive messages. */
-#define tx_period 3906
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 
@@ -63,6 +61,7 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     acomp_setup();
     adc_setup();
     adc_trigger_setlow();          // set AD to measure low gain
+    tx_period = 3906;
 
     message_rx = mrx;
     message_tx = mtx;
