@@ -90,6 +90,8 @@
         o.count = o.count + 1;\
 }
 
+#define RB_idx(o,i) o.elems[(o.head+i)%o##_rbsize]
+
 #define RB_begin(o) o.head
 
 #define RB_next(o,i) i = ((i+1)%o##_rbsize)

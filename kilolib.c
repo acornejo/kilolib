@@ -60,7 +60,7 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     motors_setup();
     acomp_setup();
     adc_setup();
-    adc_trigger_setlow();          // set AD to measure low gain
+    adc_trigger_high_gain();
     tx_period = 3906;
 
     message_rx = mrx;
@@ -260,7 +260,7 @@ int16_t get_ambientlight() {
         adc_start_conversion();
         adc_finish_conversion();
         light = ADCW;                             // store AD result
-        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
 	}
     return light;
@@ -275,7 +275,7 @@ int16_t get_temperature() {
         adc_start_conversion();
         adc_finish_conversion();
         temp = ADCW;                             // store AD result
-        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
 	}
     return temp;
@@ -289,7 +289,7 @@ int16_t get_voltage() {
         adc_start_conversion();
         adc_finish_conversion();
         voltage = ADCW;                           // store AD result
-//        adc_trigger_setlow();                     // set AD to measure low gain (for distance sensing)
+//        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
 		sei();                                    // reenable interrupts
 	}
     return voltage;
@@ -370,7 +370,7 @@ ISR(TIMER1_COMPA_vect) {
     rx_leadingbit = 1;
     rx_leadingbyte = 1;
     rx_busy = 0;
-    adc_trigger_setlow();
+    adc_trigger_high_gain();
 }
 
 /**
@@ -381,15 +381,16 @@ ISR(ANALOG_COMP_vect) {
 	uint16_t timer = TCNT1;
 
     rx_busy = 1;
-    adc_trigger_stop();
+    /* adc_trigger_stop(); */
 
 	if(rx_leadingbit) {       // Start bit received.
         rx_timer_on();
         rx_bytevalue = 0;
 		rx_leadingbit = 0;
         if (rx_leadingbyte) {
-            rx_dist.low_gain = ADCW;
-            adc_trigger_sethigh();
+            adc_finish_conversion();
+            rx_dist.high_gain = ADCW;
+            adc_trigger_low_gain();
         }
 	} else {
         // Stray bit received
@@ -398,7 +399,7 @@ ISR(ANALOG_COMP_vect) {
             rx_leadingbit = 1;
             rx_leadingbyte = 1;
             rx_busy = 0;
-            adc_trigger_setlow();
+            adc_trigger_high_gain();
         } else {
             // NOTE: The following code avoids a division which takes
             // too many clock cycles and throws off the interrupt.
@@ -409,8 +410,9 @@ ISR(ANALOG_COMP_vect) {
             } else {             // Stop bit received.
                 rx_leadingbit = 1;
                 if (rx_leadingbyte) {
-                    rx_dist.high_gain = ADCW;
-                    adc_trigger_setlow();
+                    adc_finish_conversion();
+                    rx_dist.low_gain = ADCW;
+                    adc_trigger_high_gain();
                     if (rx_bytevalue != 0) { // Collision detected.
                         rx_timer_off();
                         rx_leadingbyte = 1;
