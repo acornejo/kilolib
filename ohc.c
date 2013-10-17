@@ -47,7 +47,7 @@ int main() {
     MCUCR = (1<<IVCE);
     MCUCR = (1<<IVSEL);
 
-#define BAUD 76800
+#define BAUD 38400
 #include <util/setbaud.h>
     UBRR0 = UBRR_VALUE;
 #if USE_2X
