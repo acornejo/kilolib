@@ -61,7 +61,6 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     acomp_setup();
     adc_setup();
     adc_trigger_high_gain();
-    tx_period = 3906;
 
     message_rx = mrx;
     message_tx = mtx;
