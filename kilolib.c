@@ -20,8 +20,6 @@
 #define rx_bitcycles 269
 /* Number of clock cycles for an entire message. */
 #define rx_msgcycles (11*rx_bitcycles)
-/* Number of timer cycles between consecutive messages. */
-#define tx_period 3906
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 
@@ -73,6 +71,7 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
 	tx_mask = eeprom_read_byte(EEPROM_TXMASK);
     if (tx_mask & ~TX_MASK_MAX)
         tx_mask = TX_MASK_MIN;
+    tx_period = 3906;
     tx_clock = 0;
     tx_increment = 255;
     rx_busy = 0;
