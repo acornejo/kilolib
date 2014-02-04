@@ -68,7 +68,7 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     uint8_t osccal = eeprom_read_byte(EEPROM_OSCCAL);
     if (osccal != 0xFF)
         OSCCAL = osccal;
-	tx_mask = eeprom_read_byte(EEPROM_TXMASK);
+    tx_mask = eeprom_read_byte(EEPROM_TXMASK);
     if (tx_mask & ~TX_MASK_MAX)
         tx_mask = TX_MASK_MIN;
     tx_period = 3906;
@@ -144,21 +144,21 @@ void kilo_loop(void (*program)(void)) {
                 break;
             case BATTERY:
                 voltage = get_voltage();
-				if(voltage > 682)
-					set_color(RGB(0,3,0));
-				else if(voltage > 648)
-					set_color(RGB(0,0,3));
-				else if(voltage > 614)
-					set_color(RGB(3,3,0));
-				else
-					set_color(RGB(3,0,0));
+                if(voltage > 682)
+                    set_color(RGB(0,3,0));
+                else if(voltage > 648)
+                    set_color(RGB(0,0,3));
+                else if(voltage > 614)
+                    set_color(RGB(3,3,0));
+                else
+                    set_color(RGB(3,0,0));
                 break;
             case CHARGING:
                 if (is_charging()) {
-					set_color(RGB(1,0,0));
-					_delay_ms(1);
-					set_color(RGB(0,0,0));
-					_delay_ms(200);
+                    set_color(RGB(1,0,0));
+                    _delay_ms(1);
+                    set_color(RGB(0,0,0));
+                    _delay_ms(200);
                 } else
                     set_color(RGB(0,0,0));
                 break;
@@ -254,44 +254,44 @@ void set_motors(uint8_t ccw, uint8_t cw) {
 
 int16_t get_ambientlight() {
     int16_t light = -1;
-	if (!rx_busy) {
-		cli();
+    if (!rx_busy) {
+        cli();
         adc_setup_conversion(7);
         adc_start_conversion();
         adc_finish_conversion();
         light = ADCW;                             // store AD result
         adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
-		sei();                                    // reenable interrupts
-	}
+        sei();                                    // reenable interrupts
+    }
     return light;
 }
 
 int16_t get_temperature() {
     int16_t temp = -1;
-	if (!rx_busy) {
-		cli();
+    if (!rx_busy) {
+        cli();
         ADMUX = (1<<3)|(1<<6)|(1<<7);
         ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
         adc_start_conversion();
         adc_finish_conversion();
         temp = ADCW;                             // store AD result
         adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
-		sei();                                    // reenable interrupts
-	}
+        sei();                                    // reenable interrupts
+    }
     return temp;
 }
 
 int16_t get_voltage() {
     int16_t voltage=-1;
-	if (!rx_busy) {
-		cli();                                    // disable interrupts
+    if (!rx_busy) {
+        cli();                                    // disable interrupts
         adc_setup_conversion(6);
         adc_start_conversion();
         adc_finish_conversion();
         voltage = ADCW;                           // store AD result
 //        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
-		sei();                                    // reenable interrupts
-	}
+        sei();                                    // reenable interrupts
+    }
     return voltage;
 }
 
@@ -300,12 +300,12 @@ int16_t get_voltage() {
  * Used to send messages every tx_period ticks.
  */
 ISR(TIMER0_COMPA_vect) {
-	tx_clock += tx_increment;
+    tx_clock += tx_increment;
     tx_increment = 0xFF;
-	OCR0A = tx_increment;
+    OCR0A = tx_increment;
     kilo_ticks++;
 
-	if(!rx_busy && tx_clock>tx_period && kilo_state == RUNNING) {
+    if(!rx_busy && tx_clock>tx_period && kilo_state == RUNNING) {
         message_t *msg = message_tx();
         if (msg) {
             if (message_send(msg)) {
@@ -331,34 +331,34 @@ EMPTY_INTERRUPT(TIMER0_COMPA_vect)
 
 void set_color(uint8_t rgb) {
     if (rgb&(1<<0))
-		DDRD |= (1<<5);
-	else
-		DDRD &= ~(1<<5);
+        DDRD |= (1<<5);
+    else
+        DDRD &= ~(1<<5);
 
     if (rgb&(1<<1))
-		DDRD |= (1<<4);
-	else
-		DDRD &= ~(1<<4);
+        DDRD |= (1<<4);
+    else
+        DDRD &= ~(1<<4);
 
     if (rgb&(1<<2))
-		DDRC |= (1<<3);
-	else
-		DDRC &= ~(1<<3);
+        DDRC |= (1<<3);
+    else
+        DDRC &= ~(1<<3);
 
     if (rgb&(1<<3))
-		DDRC |= (1<<2);
-	else
-		DDRC &= ~(1<<2);
+        DDRC |= (1<<2);
+    else
+        DDRC &= ~(1<<2);
 
     if (rgb&(1<<4))
-		DDRC |= (1<<5);
-	else
-		DDRC &= ~(1<<5);
+        DDRC |= (1<<5);
+    else
+        DDRC &= ~(1<<5);
 
     if (rgb&(1<<5))
-		DDRC |= (1<<4);
-	else
-		DDRC &= ~(1<<4);
+        DDRC |= (1<<4);
+    else
+        DDRC &= ~(1<<4);
 }
 
 /**
@@ -378,21 +378,21 @@ ISR(TIMER1_COMPA_vect) {
  * Triggerred for incoming IR pulses (i.e. individual bits).
  */
 ISR(ANALOG_COMP_vect) {
-	uint16_t timer = TCNT1;
+    uint16_t timer = TCNT1;
 
     rx_busy = 1;
     /* adc_trigger_stop(); */
 
-	if(rx_leadingbit) {       // Start bit received.
+    if(rx_leadingbit) {       // Start bit received.
         rx_timer_on();
         rx_bytevalue = 0;
-		rx_leadingbit = 0;
+        rx_leadingbit = 0;
         if (rx_leadingbyte) {
             adc_finish_conversion();
             rx_dist.high_gain = ADCW;
             adc_trigger_low_gain();
         }
-	} else {
+    } else {
         // Stray bit received
         if (timer <= rx_bitcycles/2 || timer >= rx_bitcycles*9+rx_bitcycles/2) {
             rx_timer_off();
@@ -435,5 +435,5 @@ ISR(ANALOG_COMP_vect) {
                 }
             }
         }
-	}
+    }
 }

@@ -61,7 +61,7 @@ int main() {
 
     tx_mask = ir_mask;
 
-	// Use LEDs to flash power on indicator signal.
+    // Use LEDs to flash power on indicator signal.
     uint8_t i;
     for (i=0; i<5; i++) {
         blue_port |= blue_mask;
@@ -72,7 +72,7 @@ int main() {
         _delay_ms(200);
     }
 
-	while(1) {
+    while(1) {
         if (has_new_packet) {
             has_new_packet = 0;
             switch(packet_type) {
@@ -154,8 +154,8 @@ int main() {
                 _delay_ms(10);
                 break;
             }
-		}
-	}
+        }
+    }
 
     return 0;
 }
