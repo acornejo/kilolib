@@ -57,7 +57,7 @@ build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
 	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
 program-ohc: build/ohc.hex
-	$(AVRUP) -p m328p  $(PFLAGS) "flash:w:$<:i"
+	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
 
 program-boot: build/bootldr.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
