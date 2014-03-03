@@ -27,6 +27,10 @@ typedef union {
         uint8_t type;
         uint16_t crc;
     };
+    struct {
+        uint8_t payload[10];
+        uint16_t crc16;
+    };
 } message_t;
 
 volatile uint8_t tx_mask;

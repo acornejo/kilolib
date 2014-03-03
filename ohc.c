@@ -141,7 +141,7 @@ int main() {
                 cli();
                 for (i = 2; i<PACKET_SIZE-7; i+=7) {
                     memcpy(&msg.gpsmsg, new_packet+i, 7);
-                    if (msg.gpsmsg.id == 0)
+                    if (msg.gpsmsg.id == 0 && msg.gpsmsg.x == 0 && msg.gpsmsg.y == 0 && msg.gpsmsg.theta == 0 && msg.gpsmsg.unused == 0)
                         break;
                     msg.crc = message_crc(&msg);
                     message_send(&msg);
