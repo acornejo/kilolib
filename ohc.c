@@ -135,12 +135,13 @@ int main() {
                 green_port &= ~green_mask;
                 _delay_ms(10);
                 break;
+#define GPS_MSGSIZE 8
             case PACKET_GPSFRAME:
+                memset(&msg, 0, sizeof(message_t)-sizeof(msg.crc));
                 msg.type = GPS;
-                msg.gpsmsg.unused = 0;
                 cli();
-                for (i = 2; i<PACKET_SIZE-7; i+=7) {
-                    memcpy(&msg.gpsmsg, new_packet+i, 7);
+                for (i = 2; i<PACKET_SIZE-GPS_MSGSIZE; i += GPS_MSGSIZE) {
+                    memcpy(&msg.gpsmsg, new_packet+i, GPS_MSGSIZE);
                     if (msg.gpsmsg.id == 0 && msg.gpsmsg.x == 0 && msg.gpsmsg.y == 0 && msg.gpsmsg.theta == 0 && msg.gpsmsg.unused == 0)
                         break;
                     msg.crc = message_crc(&msg);
