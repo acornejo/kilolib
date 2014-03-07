@@ -27,7 +27,8 @@ static message_rx_t message_rx = 0;
 static message_tx_t message_tx = 0;
 static message_tx_success_t message_tx_success = 0;
 
-
+volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
+uint16_t kilo_uid;                 // unique identifier (stored in EEPROM)
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
 message_t rx_msg;                  // message being received
