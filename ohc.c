@@ -65,10 +65,10 @@ int main() {
     //move interrupt vectors to bootloader interupts
     MCUCR = (1<<IVCE);
     MCUCR = (1<<IVSEL);
-#if F_CPU == 16000000
+#endif
+#ifdef ARDUINO_16MHZ
     CLKPR = (1<<CLKPCE);
     CLKPR = 1;
-#endif
 #endif
 
 #define BAUD 38400
