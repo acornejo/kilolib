@@ -1,8 +1,9 @@
-all: ohc bootldr blank 
+all: ohc bootldr blank ohc-arduino
 
 .PHONY: ohc bootldr blank
 KILOLIB = build/kilolib.a
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
+ohc-arduino: build/ohc-arduino.elf build/ohc-arduino.hex build/ohc-arduino.lss
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 blank: build/blank.elf build/blank.hex build/blank.lss
 
@@ -13,12 +14,14 @@ AVROD = avr-objdump
 AVRUP = avrdude
 
 # PFLAGS = -P /dev/ttyACM0 -c avrisp2 -U
-PFLAGS = -P usb -c avrispmkII -U
+PFLAGS = -P /dev/cu.usbserial-A8022FRY -b 57600 -c arduino -D -U
+# PFLAGS = -P usb -c avrispmkII -U
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -O3 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 ASFLAGS = $(CFLAGS)
 BOOTLDR_FLAGS = -Wl,-section-start=.text=0x7000 -DBOOTLOADER
 OHC_FLAGS = -Wl,-section-start=.text=0x7000 -DOHC
+OHC_ARDUINO_FLAGS = -DOHC -DARDUINO
 
 FLASH = -R .eeprom -R .fuse -R .lock -R .signature
 EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0  
@@ -53,11 +56,17 @@ build/blank.elf: blank.c $(KILOLIB) | build
 build/ohc.elf: ohc.c message_crc.c message_send.S | build
 	$(CC) $(CFLAGS) $(OHC_FLAGS) -o $@ ohc.c message_crc.c message_send.S
 
+build/ohc-arduino.elf: ohc.c message_crc.c message_send.S | build
+	$(CC) $(CFLAGS) $(OHC_ARDUINO_FLAGS) -o $@ ohc.c message_crc.c message_send.S
+
 build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
 	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
 program-ohc: build/ohc.hex
 	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
+
+program-ohc-arduino: build/ohc-arduino.hex
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
 
 program-boot: build/bootldr.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"

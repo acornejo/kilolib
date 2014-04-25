@@ -26,26 +26,50 @@ volatile uint8_t has_new_packet = 0;
 uint8_t leds_toggle = 0;
 message_t msg;
 
+#ifdef ARDUINO
+#define ir_port PORTB
+#define ir_ddr DDRB
+#define ir_mask (1<<1)
+#define blue_port PORTB
+#define blue_ddr DDRB
+#define blue_mask (1<<5)
+#define green_port PORTB
+#define green_ddr DDRB
+#define green_mask (1<<5)
+#else
 #define ir_port PORTD
+#define ir_ddr DDRD
 #define ir_mask (1<<3)
 #define blue_port PORTD
+#define blue_ddr DDRD
 #define blue_mask (1<<2)
 #define green_port PORTB
+#define green_ddr DDRB
 #define green_mask (1<<1)
+#endif
 
 int main() {
     cli();
     // Set port outputs
-    DDRB = (1<<1)|(1<<2);         // enable green led & blue led
-    DDRD = (1<<2)|(1<<3);         // enable ir led & blue led
-    // Turn IR led off
+    ir_ddr |= ir_mask;
+    green_ddr |= green_mask;
+    blue_ddr |= blue_mask;
+    // Turn off all leds
+    green_port &= ~green_mask;
+    blue_port &= ~blue_mask;
     ir_port &= ~ir_mask;
     // turn off analog comparator (to avoid detecting collisions)
     ACSR |= (1<<ACD);
 
+#ifndef ARDUINO
     //move interrupt vectors to bootloader interupts
     MCUCR = (1<<IVCE);
     MCUCR = (1<<IVSEL);
+#if F_CPU == 16000000
+    CLKPR = (1<<CLKPCE);
+    CLKPR = 1;
+#endif
+#endif
 
 #define BAUD 38400
 #include <util/setbaud.h>
@@ -80,10 +104,13 @@ int main() {
                 break;
             case PACKET_LEDTOGGLE:
                 leds_toggle = !leds_toggle;
-                if (leds_toggle)
+                if (leds_toggle) {
                     blue_port |= blue_mask;
-                else
+                    green_port |= green_mask;
+                } else {
                     blue_port &= ~blue_mask;
+                    green_port &= ~green_mask;
+                }
                 break;
             case PACKET_FORWARDMSG:
                 for (i = 0; i<sizeof(message_t)-sizeof(msg.crc); i++)

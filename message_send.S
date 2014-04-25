@@ -5,8 +5,13 @@
 #define irsend_cycles 16
 
 #ifdef OHC
+#ifdef ARDUINO
+#define IR_PORT PORTB
+#define IR_DDR DDRB
+#else
 #define IR_PORT PORTD
 #define IR_DDR DDRD
+#endif
 #else
 #define IR_PORT PORTB
 #define IR_DDR DDRB
@@ -90,7 +95,7 @@ message_send:
     out IR_DDR, tmpreg1
 
     ldi tmpreg1, 0x01
-    irsend 
+    irsend
     delay_cycles (2*rx_bitcycles-irsend_cycles)
 
     ldi tmpreg1, rx_bitcycles*7/8
@@ -117,7 +122,7 @@ nocollision:
     brne checkcollision
 
     ldi tmpreg1, 0x01
-    irsend 
+    irsend
     delay_cycles (rx_bitcycles-irsend_cycles)
 
     movw r30, r24     ; // copy msg pointer in r24:r25 to r30:r31
@@ -146,7 +151,7 @@ sendbit:
     or  tmpreg1, tmpreg2
 
     ; irsend tmpreg
-    irsend 
+    irsend
     delay_cycles (rx_bitcycles-irsend_cycles-9)
 
     ; bitmask <<= 1
