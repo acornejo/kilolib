@@ -4,6 +4,7 @@ all: ohc bootldr blank ohc-arduino
 KILOLIB = build/kilolib.a
 ohc: build/ohc.elf build/ohc.hex build/ohc.lss
 ohc-arduino: build/ohc-arduino.elf build/ohc-arduino.hex build/ohc-arduino.lss
+ohc-arduino-16mhz: build/ohc-arduino-16mhz.elf build/ohc-arduino-16mhz.hex build/ohc-arduino-16mhz.lss
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 blank: build/blank.elf build/blank.hex build/blank.lss
 
@@ -59,6 +60,9 @@ build/ohc.elf: ohc.c message_crc.c message_send.S | build
 build/ohc-arduino.elf: ohc.c message_crc.c message_send.S | build
 	$(CC) $(CFLAGS) $(OHC_ARDUINO_FLAGS) -o $@ ohc.c message_crc.c message_send.S
 
+build/ohc-arduino-16mhz.elf: ohc.c message_crc.c message_send.S | build
+	$(CC) $(CFLAGS) $(OHC_ARDUINO_FLAGS) -DARDUINO_16MHZ -o $@ ohc.c message_crc.c message_send.S
+
 build/bootldr.elf: bootldr.c kilolib.c message_crc.c | build
 	$(CC) $(CFLAGS) $(BOOTLDR_FLAGS) -o $@ bootldr.c kilolib.c message_crc.c
 
@@ -66,6 +70,9 @@ program-ohc: build/ohc.hex
 	$(AVRUP) -p m328  $(PFLAGS) "flash:w:$<:i"
 
 program-ohc-arduino: build/ohc-arduino.hex
+	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
+
+program-ohc-arduino-16mhz: build/ohc-arduino-16mhz.hex
 	$(AVRUP) -p m328p $(PFLAGS) "flash:w:$<:i"
 
 program-boot: build/bootldr.hex
