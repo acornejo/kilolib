@@ -14,9 +14,7 @@ AVROC = avr-objcopy
 AVROD = avr-objdump
 AVRUP = avrdude
 
-# PFLAGS = -P /dev/ttyACM0 -c avrisp2 -U
-PFLAGS = -P /dev/cu.usbserial-A8022FRY -b 57600 -c arduino -D -U
-# PFLAGS = -P usb -c avrispmkII -U
+PFLAGS = -P usb -c avrispmkII -U # user to reprogram OHC
 CFLAGS = -mmcu=atmega328p -Wall -gdwarf-2 -O3 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -DF_CPU=8000000
 ASFLAGS = $(CFLAGS)

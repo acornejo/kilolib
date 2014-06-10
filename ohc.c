@@ -3,19 +3,10 @@
 #include <util/delay.h>    // for _delay_ms
 #include <string.h>        // for memcpy
 #include "message.h"
-
-// 01010101
-#define PACKET_HEADER 0x55
-#define PACKET_SIZE   128+4
-enum {
-    PACKET_STOP,
-    PACKET_LEDTOGGLE,
-    PACKET_FORWARDMSG,
-    PACKET_FORWARDRAWMSG,
-    PACKET_BOOTPAGE,
-    PACKET_GPSFRAME,
-    PACKET_FORWARDMSGSINGLE,
-};
+#include "message_crc.h"
+#include "message_send.h"
+#include "bootldr.h"
+#include "ohc.h"
 
 uint8_t packet_buffer[PACKET_SIZE];
 uint8_t packet_head = 0;
@@ -23,8 +14,11 @@ uint8_t packet_checksum = 0;
 uint8_t new_packet[PACKET_SIZE];
 volatile uint8_t packet_type;
 volatile uint8_t has_new_packet = 0;
+volatile uint8_t tx_mask;
 uint8_t leds_toggle = 0;
 message_t msg;
+bootmsg_t *bootmsg;
+gpsmsg_t *gpsmsg;
 
 #ifdef ARDUINO
 #define ir_port PORTB
@@ -84,6 +78,8 @@ int main() {
     sei();
 
     tx_mask = ir_mask;
+    bootmsg = (bootmsg_t*)msg.data;
+    gpsmsg = (gpsmsg_t*)msg.data;
 
     // Use LEDs to flash power on indicator signal.
     uint8_t i;
@@ -147,12 +143,12 @@ int main() {
                 break;
             case PACKET_BOOTPAGE:
                 msg.type = BOOTPGM_PAGE;
-                msg.bootmsg.page_address = new_packet[2];
-                msg.bootmsg.unused = 0;
+                bootmsg->page_address = new_packet[2];
+                bootmsg->unused = 0;
                 cli();
                 for (i = 0; i<SPM_PAGESIZE && !has_new_packet; i+=6) {
-                    msg.bootmsg.page_offset = i/2;
-                    memcpy(&msg.bootmsg.word1, new_packet+3+i, 6);
+                    bootmsg->page_offset = i/2;
+                    memcpy(&(bootmsg->word1), new_packet+3+i, 6);
                     msg.crc = message_crc(&msg);
                     message_send(&msg);
                 }
@@ -168,8 +164,8 @@ int main() {
                 msg.type = GPS;
                 cli();
                 for (i = 2; i<PACKET_SIZE-GPS_MSGSIZE; i += GPS_MSGSIZE) {
-                    memcpy(&msg.gpsmsg, new_packet+i, GPS_MSGSIZE);
-                    if (msg.gpsmsg.id == 0 && msg.gpsmsg.x == 0 && msg.gpsmsg.y == 0 && msg.gpsmsg.theta == 0 && msg.gpsmsg.unused == 0)
+                    memcpy(gpsmsg, new_packet+i, GPS_MSGSIZE);
+                    if (gpsmsg->id == 0 && gpsmsg->x == 0 && gpsmsg->y == 0 && gpsmsg->theta == 0 && gpsmsg->unused == 0)
                         break;
                     msg.crc = message_crc(&msg);
                     message_send(&msg);

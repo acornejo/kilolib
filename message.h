@@ -6,38 +6,11 @@
 typedef union {
     uint8_t rawdata[12];
     struct {
-        union {
-            uint8_t data[9];
-            struct {
-                uint8_t page_address;
-                uint8_t page_offset;
-                uint16_t word1;
-                uint16_t word2;
-                uint16_t word3;
-                uint8_t unused;
-            } bootmsg;
-            struct {
-                uint16_t id;
-                int16_t x;
-                int16_t y;
-                int8_t theta;
-                uint16_t unused;
-            } gpsmsg;
-        };
+        uint8_t data[9];
         uint8_t type;
         uint16_t crc;
     };
-    struct {
-        uint8_t payload[10];
-        uint16_t crc16;
-    };
 } message_t;
-
-volatile uint8_t tx_mask;
-volatile uint16_t tx_period;
-
-uint16_t message_crc(message_t *);
-uint8_t message_send(message_t *);
 
 typedef enum {
     NORMAL = 0,
@@ -52,7 +25,8 @@ typedef enum {
     CHARGE,
     VOLTAGE,
     RUN,
-    READUID
+    READUID,
+    CALIB,
 } message_type_t;
 
 #endif//__MESSAGES_H__

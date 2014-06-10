@@ -7,12 +7,17 @@
 #include <stdlib.h>         // for rand()
 
 #include "kilolib.h"
+#include "message_send.h"
 #include "macros.h"
+#include "ohc.h"
 
-#define EEPROM_OSCCAL (uint8_t*)0x01
-#define EEPROM_TXMASK (uint8_t*)0x90
-#define EEPROM_UID    (uint8_t*)0xB0
-#define EEPROM_CCW_IN_PLACE (uint8_t*)0x09
+#define EEPROM_OSCCAL         (uint8_t*)0x01
+#define EEPROM_TXMASK         (uint8_t*)0x90
+#define EEPROM_UID            (uint8_t*)0xB0
+#define EEPROM_LEFT_ROTATE    (uint8_t*)0x05
+#define EEPROM_RIGHT_ROTATE   (uint8_t*)0x09
+#define EEPROM_LEFT_STRAIGHT  (uint8_t*)0x0C
+#define EEPROM_RIGHT_STRAIGHT (uint8_t*)0x14
 #define TX_MASK_MAX   ((1<<0)|(1<<1)|(1<<2)|(1<<6)|(1<<7))
 #define TX_MASK_MIN   ((1<<0))
 
@@ -28,6 +33,10 @@ static message_tx_t message_tx = 0;
 static message_tx_success_t message_tx_success = 0;
 
 volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
+uint8_t kilo_turn_left;
+uint8_t kilo_turn_right;
+uint8_t kilo_straight_left;
+uint8_t kilo_straight_right;
 uint16_t kilo_uid;                 // unique identifier (stored in EEPROM)
 uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
@@ -38,6 +47,8 @@ uint8_t rx_leadingbit;             // flag that signals start bit
 uint8_t rx_leadingbyte;            // flag that signals start byte
 uint8_t rx_byteindex;              // index to the current byte being decoded
 uint8_t rx_bytevalue;              // value of the current byte being decoded
+volatile uint8_t tx_mask;
+volatile uint16_t kilo_tx_period;
 
 static volatile enum {
     SLEEPING,
@@ -45,7 +56,7 @@ static volatile enum {
     BATTERY,
     RUNNING,
     CHARGING,
-    READINGUID,
+    MOVING
 } kilo_state;
 
 /**
@@ -54,6 +65,10 @@ static volatile enum {
  */
 void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsuccess) {
     cli();
+    message_rx = mrx;
+    message_tx = mtx;
+    message_tx_success = mtxsuccess;
+
     ports_off();
     ports_on();
     tx_timer_setup();
@@ -63,26 +78,30 @@ void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsucce
     adc_setup();
     adc_trigger_high_gain();
 
-    message_rx = mrx;
-    message_tx = mtx;
-    message_tx_success = mtxsuccess;
     uint8_t osccal = eeprom_read_byte(EEPROM_OSCCAL);
     if (osccal != 0xFF)
         OSCCAL = osccal;
-    tx_mask = eeprom_read_byte(EEPROM_TXMASK);
-    if (tx_mask & ~TX_MASK_MAX)
-        tx_mask = TX_MASK_MIN;
-    tx_period = 3906;
-    tx_clock = 0;
-    tx_increment = 255;
+
     rx_busy = 0;
     rx_leadingbit = 1;
     rx_leadingbyte = 1;
     rx_byteindex = 0;
     rx_bytevalue = 0;
+#ifndef BOOTLOADER
+    tx_mask = eeprom_read_byte(EEPROM_TXMASK);
+    if (tx_mask & ~TX_MASK_MAX)
+        tx_mask = TX_MASK_MIN;
+    tx_clock = 0;
+    tx_increment = 255;
     kilo_ticks = 0;
     kilo_state = IDLE;
+    kilo_tx_period = 3906;
     kilo_uid = eeprom_read_byte(EEPROM_UID) | eeprom_read_byte(EEPROM_UID+1)<<8;
+    kilo_turn_left = eeprom_read_byte(EEPROM_LEFT_ROTATE);
+    kilo_turn_right = eeprom_read_byte(EEPROM_RIGHT_ROTATE);
+    kilo_straight_left = eeprom_read_byte(EEPROM_LEFT_STRAIGHT);
+    kilo_straight_right = eeprom_read_byte(EEPROM_RIGHT_STRAIGHT);
+#endif
     sei();
 }
 
@@ -103,7 +122,14 @@ ISR(WDT_vect) {
     wdt_disable();
 }
 
-static uint8_t read_move;
+enum {
+    MOVE_STOP,
+    MOVE_LEFT,
+    MOVE_RIGHT,
+    MOVE_STRAIGHT
+};
+
+static volatile uint8_t prev_motion = MOVE_STOP, cur_motion = MOVE_STOP;
 
 void kilo_loop(void (*program)(void)) {
     int16_t voltage;
@@ -166,20 +192,26 @@ void kilo_loop(void (*program)(void)) {
             case RUNNING:
                 program();
                 break;
-            case READINGUID:
-                set_color(RGB(0,0,0));
-                switch(read_move) {
-                    case 0:
-                        set_motors(0,0);
-                        break;
-                    case 1:
-                        set_motors(0,eeprom_read_byte(EEPROM_CCW_IN_PLACE));
-                        break;
-                    case 2:
-                        set_motors(0,255);
-                        _delay_ms(20);
-                        read_move = 1;
-                        break;
+            case MOVING:
+                if (cur_motion == MOVE_STOP) {
+                    set_motors(0,0);
+                } else {
+                    if (cur_motion != prev_motion) {
+                        prev_motion = cur_motion;
+                        if (cur_motion == MOVE_LEFT) {
+                            set_motors(0xFF, 0);
+                            _delay_ms(15);
+                            set_motors(kilo_turn_left, 0);
+                        } else if (cur_motion == MOVE_RIGHT) {
+                            set_motors(0, 0xFF);
+                            _delay_ms(15);
+                            set_motors(0, kilo_turn_right);
+                        } else {
+                            set_motors(0xFF, 0xFF);
+                            _delay_ms(15);
+                            set_motors(kilo_straight_left, kilo_straight_right);
+                        }
+                    }
                 }
                 break;
         }
@@ -198,11 +230,12 @@ void kilo_reset() {
 
 static inline void process_message() {
     AddressPointer_t reset = (AddressPointer_t)0x0000, bootload = (AddressPointer_t)0x7000;
+    calibmsg_t *calibmsg = (calibmsg_t*)&rx_msg.data;
     if (rx_msg.type < SPECIAL) {
         message_rx(&rx_msg, &rx_dist);
         return;
     }
-    if (rx_msg.type != READUID && rx_msg.type != RUN)
+    if (rx_msg.type != READUID && rx_msg.type != RUN && rx_msg.type != CALIB)
         motors_off();
     switch (rx_msg.type) {
         case BOOT:
@@ -230,18 +263,64 @@ static inline void process_message() {
                 kilo_state = RUNNING;
             }
             break;
+        case CALIB:
+            if (calibmsg->mode != CALIB_SAVE && calibmsg->mode != CALIB_UID) {
+                if (kilo_state != MOVING) {
+                    motors_on();
+                    kilo_state = MOVING;
+                }
+            } else {
+                motors_off();
+                kilo_state = IDLE;
+            }
+            switch(calibmsg->mode) {
+                case CALIB_SAVE:
+                    eeprom_write_byte(EEPROM_UID, kilo_uid&0xFF);
+                    eeprom_write_byte(EEPROM_UID+1, (kilo_uid>>8)&0xFF);
+                    eeprom_write_byte(EEPROM_LEFT_ROTATE, kilo_turn_left);
+                    eeprom_write_byte(EEPROM_RIGHT_ROTATE, kilo_turn_right);
+                    eeprom_write_byte(EEPROM_LEFT_STRAIGHT, kilo_straight_left);
+                    eeprom_write_byte(EEPROM_RIGHT_STRAIGHT, kilo_straight_right);
+                    break;
+                case CALIB_UID:
+                    kilo_uid = calibmsg->uid;
+                    break;
+                case CALIB_TURN_LEFT:
+                    if (cur_motion != MOVE_LEFT || kilo_turn_left != calibmsg->turn_left) {
+                        prev_motion = MOVE_STOP;
+                        kilo_turn_left = calibmsg->turn_left;
+                        cur_motion = MOVE_LEFT;
+                    }
+                    break;
+                case CALIB_TURN_RIGHT:
+                    if (cur_motion != MOVE_RIGHT || kilo_turn_right != calibmsg->turn_right) {
+                        prev_motion = MOVE_STOP;
+                        kilo_turn_right = calibmsg->turn_right;
+                        cur_motion = MOVE_RIGHT;
+                    }
+                    break;
+                case CALIB_STRAIGHT:
+                    if (cur_motion != MOVE_STRAIGHT || kilo_straight_right != calibmsg->straight_right || kilo_straight_left != calibmsg->straight_left) {
+                        prev_motion = MOVE_STOP;
+                        kilo_straight_left = calibmsg->straight_left;
+                        kilo_straight_right = calibmsg->straight_right;
+                        cur_motion = MOVE_STRAIGHT;
+                    }
+                    break;
+            }
+            break;
         case READUID:
-            if (kilo_state != READINGUID) {
+            if (kilo_state != MOVING) {
                 motors_on();
-                kilo_state = READINGUID;
-                read_move = 0;
+                set_color(RGB(0,0,0));
+                prev_motion = cur_motion = MOVE_STOP;
+                kilo_state = MOVING;
             }
 
-            if (kilo_uid&(1<<rx_msg.data[0])) {
-                if (read_move == 0)
-                    read_move = 2;
-            } else
-                read_move = 0;
+            if (kilo_uid&(1<<rx_msg.data[0]))
+                cur_motion = MOVE_LEFT;
+            else
+                cur_motion = MOVE_STOP;
             break;
         default:
             break;
@@ -261,7 +340,7 @@ int16_t get_ambientlight() {
         adc_start_conversion();
         adc_finish_conversion();
         light = ADCW;                             // store AD result
-        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
+        adc_trigger_high_gain();                     // set AD to measure high gain (for distance sensing)
         sei();                                    // reenable interrupts
     }
     return light;
@@ -276,7 +355,7 @@ int16_t get_temperature() {
         adc_start_conversion();
         adc_finish_conversion();
         temp = ADCW;                             // store AD result
-        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
+        adc_trigger_high_gain();                     // set AD to measure high gain (for distance sensing)
         sei();                                    // reenable interrupts
     }
     return temp;
@@ -290,7 +369,7 @@ int16_t get_voltage() {
         adc_start_conversion();
         adc_finish_conversion();
         voltage = ADCW;                           // store AD result
-//        adc_trigger_high_gain();                     // set AD to measure low gain (for distance sensing)
+//        adc_trigger_high_gain();                     // set AD to measure high gain (for distance sensing)
         sei();                                    // reenable interrupts
     }
     return voltage;
@@ -298,7 +377,7 @@ int16_t get_voltage() {
 
 /**
  * Timer0 interrupt.
- * Used to send messages every tx_period ticks.
+ * Used to send messages every kilo_tx_period ticks.
  */
 ISR(TIMER0_COMPA_vect) {
     tx_clock += tx_increment;
@@ -306,7 +385,7 @@ ISR(TIMER0_COMPA_vect) {
     OCR0A = tx_increment;
     kilo_ticks++;
 
-    if(!rx_busy && tx_clock>tx_period && kilo_state == RUNNING) {
+    if(!rx_busy && tx_clock>kilo_tx_period && kilo_state == RUNNING) {
         message_t *msg = message_tx();
         if (msg) {
             if (message_send(msg)) {

@@ -1,5 +1,7 @@
 #include "kilolib.h"
 #include "bitfield.h"
+#include "bootldr.h"
+#include "message_send.h"
 #include <avr/interrupt.h>  // for cli/sei
 #include <avr/io.h>         // for port and register definitions
 #include <avr/boot.h>       // to write boot pages
@@ -10,6 +12,7 @@ uint8_t  page_count;
 uint8_t  page_address;
 uint16_t page_byte_count;
 uint16_t page_buffer[SPM_PAGESIZE/2+2];
+bootmsg_t *bootmsg;
 BF_create(page_table, 224);
 
 void goto_program() {
@@ -20,13 +23,14 @@ void goto_program() {
 
 void message_rx(message_t *msg, distance_measurement_t *dist) {
     if (msg->type == BOOTPGM_PAGE) {
-        if (page_address != msg->bootmsg.page_address) {
-            page_address = msg->bootmsg.page_address;
+        bootmsg = (bootmsg_t*)msg->data;
+        if (page_address != bootmsg->page_address) {
+            page_address = bootmsg->page_address;
             page_byte_count = 0;
         }
-        page_buffer[msg->bootmsg.page_offset] = msg->bootmsg.word1;
-        page_buffer[msg->bootmsg.page_offset+1] = msg->bootmsg.word2;
-        page_buffer[msg->bootmsg.page_offset+2] = msg->bootmsg.word3;
+        page_buffer[bootmsg->page_offset] = bootmsg->word1;
+        page_buffer[bootmsg->page_offset+1] = bootmsg->word2;
+        page_buffer[bootmsg->page_offset+2] = bootmsg->word3;
         page_byte_count += 6;
         if (page_byte_count >= SPM_PAGESIZE && !BF_get(page_table, page_address)) {
             /**
