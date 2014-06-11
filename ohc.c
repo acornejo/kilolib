@@ -14,7 +14,7 @@ uint8_t packet_checksum = 0;
 uint8_t new_packet[PACKET_SIZE];
 volatile uint8_t packet_type;
 volatile uint8_t has_new_packet = 0;
-volatile uint8_t tx_mask;
+volatile uint8_t tx_mask = 0;
 uint8_t leds_toggle = 0;
 message_t msg;
 bootmsg_t *bootmsg;
@@ -24,33 +24,25 @@ gpsmsg_t *gpsmsg;
 #define ir_port PORTB
 #define ir_ddr DDRB
 #define ir_mask (1<<1)
-#define blue_port PORTB
-#define blue_ddr DDRB
-#define blue_mask (1<<5)
-#define green_port PORTB
-#define green_ddr DDRB
-#define green_mask (1<<5)
+#define led_port PORTB
+#define led_ddr DDRB
+#define led_mask (1<<5)
 #else
 #define ir_port PORTD
 #define ir_ddr DDRD
 #define ir_mask (1<<3)
-#define blue_port PORTD
-#define blue_ddr DDRD
-#define blue_mask (1<<2)
-#define green_port PORTB
-#define green_ddr DDRB
-#define green_mask (1<<1)
+#define led_port PORTB
+#define led_ddr DDRB
+#define led_mask (1<<1)
 #endif
 
 int main() {
     cli();
     // Set port outputs
     ir_ddr |= ir_mask;
-    green_ddr |= green_mask;
-    blue_ddr |= blue_mask;
+    led_ddr |= led_mask;
     // Turn off all leds
-    green_port &= ~green_mask;
-    blue_port &= ~blue_mask;
+    led_port &= ~led_mask;
     ir_port &= ~ir_mask;
     // turn off analog comparator (to avoid detecting collisions)
     ACSR |= (1<<ACD);
@@ -84,11 +76,9 @@ int main() {
     // Use LEDs to flash power on indicator signal.
     uint8_t i;
     for (i=0; i<5; i++) {
-        blue_port |= blue_mask;
-        green_port |= green_mask;
+        led_port |= led_mask;
         _delay_ms(200);
-        blue_port &= ~blue_mask;
-        green_port &= ~green_mask;
+        led_port &= ~led_mask;
         _delay_ms(200);
     }
 
@@ -101,11 +91,9 @@ int main() {
             case PACKET_LEDTOGGLE:
                 leds_toggle = !leds_toggle;
                 if (leds_toggle) {
-                    blue_port |= blue_mask;
-                    green_port |= green_mask;
+                    led_port |= led_mask;
                 } else {
-                    blue_port &= ~blue_mask;
-                    green_port &= ~green_mask;
+                    led_port &= ~led_mask;
                 }
                 break;
             case PACKET_FORWARDMSG:
@@ -114,9 +102,9 @@ int main() {
                 msg.crc = message_crc(&msg);
                 while(!has_new_packet) {
                     message_send(&msg);
-                    green_port |= green_mask;
+                    led_port |= led_mask;
                     _delay_ms(3);
-                    green_port &= ~green_mask;
+                    led_port &= ~led_mask;
                     _delay_ms(3);
                 }
                 break;
@@ -125,9 +113,9 @@ int main() {
                     msg.rawdata[i] = new_packet[i+2];
                 msg.crc = message_crc(&msg);
                 message_send(&msg);
-                green_port |= green_mask;
+                led_port |= led_mask;
                 _delay_ms(3);
-                green_port &= ~green_mask;
+                led_port &= ~led_mask;
                 _delay_ms(3);
                 break;
             case PACKET_FORWARDRAWMSG:
@@ -135,9 +123,9 @@ int main() {
                     msg.rawdata[i] = new_packet[i+2];
                 while(!has_new_packet) {
                     message_send(&msg);
-                    green_port |= green_mask;
+                    led_port |= led_mask;
                     _delay_ms(3);
-                    green_port &= ~green_mask;
+                    led_port &= ~led_mask;
                     _delay_ms(3);
                 }
                 break;
@@ -153,9 +141,9 @@ int main() {
                     message_send(&msg);
                 }
                 sei();
-                green_port |= green_mask;
+                led_port |= led_mask;
                 _delay_ms(10);
-                green_port &= ~green_mask;
+                led_port &= ~led_mask;
                 _delay_ms(10);
                 break;
 #define GPS_MSGSIZE 8
@@ -172,9 +160,9 @@ int main() {
                     _delay_us(50);
                 }
                 sei();
-                green_port |= green_mask;
+                led_port |= led_mask;
                 _delay_ms(10);
-                green_port &= ~green_mask;
+                led_port &= ~led_mask;
                 _delay_ms(10);
                 break;
             }

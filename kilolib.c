@@ -264,26 +264,23 @@ static inline void process_message() {
             }
             break;
         case CALIB:
-            if (calibmsg->mode != CALIB_SAVE && calibmsg->mode != CALIB_UID) {
-                if (kilo_state != MOVING) {
-                    motors_on();
-                    kilo_state = MOVING;
-                }
-            } else {
-                motors_off();
-                kilo_state = IDLE;
-            }
+            reset();
             switch(calibmsg->mode) {
                 case CALIB_SAVE:
-                    eeprom_write_byte(EEPROM_UID, kilo_uid&0xFF);
-                    eeprom_write_byte(EEPROM_UID+1, (kilo_uid>>8)&0xFF);
-                    eeprom_write_byte(EEPROM_LEFT_ROTATE, kilo_turn_left);
-                    eeprom_write_byte(EEPROM_RIGHT_ROTATE, kilo_turn_right);
-                    eeprom_write_byte(EEPROM_LEFT_STRAIGHT, kilo_straight_left);
-                    eeprom_write_byte(EEPROM_RIGHT_STRAIGHT, kilo_straight_right);
+                    if (kilo_state == MOVING) {
+                        eeprom_write_byte(EEPROM_UID, kilo_uid&0xFF);
+                        eeprom_write_byte(EEPROM_UID+1, (kilo_uid>>8)&0xFF);
+                        eeprom_write_byte(EEPROM_LEFT_ROTATE, kilo_turn_left);
+                        eeprom_write_byte(EEPROM_RIGHT_ROTATE, kilo_turn_right);
+                        eeprom_write_byte(EEPROM_LEFT_STRAIGHT, kilo_straight_left);
+                        eeprom_write_byte(EEPROM_RIGHT_STRAIGHT, kilo_straight_right);
+                        motors_off();
+                        kilo_state = IDLE;
+                    }
                     break;
                 case CALIB_UID:
                     kilo_uid = calibmsg->uid;
+                    cur_motion = MOVE_STOP;
                     break;
                 case CALIB_TURN_LEFT:
                     if (cur_motion != MOVE_LEFT || kilo_turn_left != calibmsg->turn_left) {
@@ -307,6 +304,10 @@ static inline void process_message() {
                         cur_motion = MOVE_STRAIGHT;
                     }
                     break;
+            }
+            if (calibmsg->mode != CALIB_SAVE && kilo_state != MOVING) {
+                motors_on();
+                kilo_state = MOVING;
             }
             break;
         case READUID:
