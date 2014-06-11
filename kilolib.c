@@ -195,6 +195,7 @@ void kilo_loop(void (*program)(void)) {
             case MOVING:
                 if (cur_motion == MOVE_STOP) {
                     set_motors(0,0);
+                    prev_motion = MOVE_STOP;
                 } else {
                     if (cur_motion != prev_motion) {
                         prev_motion = cur_motion;
@@ -207,6 +208,7 @@ void kilo_loop(void (*program)(void)) {
                             _delay_ms(15);
                             set_motors(0, kilo_turn_right);
                         } else {
+                            set_motors(0, 0xFF);
                             set_motors(0xFF, 0xFF);
                             _delay_ms(15);
                             set_motors(kilo_straight_left, kilo_straight_right);
@@ -264,7 +266,6 @@ static inline void process_message() {
             }
             break;
         case CALIB:
-            reset();
             switch(calibmsg->mode) {
                 case CALIB_SAVE:
                     if (kilo_state == MOVING) {
@@ -285,23 +286,23 @@ static inline void process_message() {
                 case CALIB_TURN_LEFT:
                     if (cur_motion != MOVE_LEFT || kilo_turn_left != calibmsg->turn_left) {
                         prev_motion = MOVE_STOP;
-                        kilo_turn_left = calibmsg->turn_left;
                         cur_motion = MOVE_LEFT;
+                        kilo_turn_left = calibmsg->turn_left;
                     }
                     break;
                 case CALIB_TURN_RIGHT:
                     if (cur_motion != MOVE_RIGHT || kilo_turn_right != calibmsg->turn_right) {
                         prev_motion = MOVE_STOP;
-                        kilo_turn_right = calibmsg->turn_right;
                         cur_motion = MOVE_RIGHT;
+                        kilo_turn_right = calibmsg->turn_right;
                     }
                     break;
                 case CALIB_STRAIGHT:
                     if (cur_motion != MOVE_STRAIGHT || kilo_straight_right != calibmsg->straight_right || kilo_straight_left != calibmsg->straight_left) {
                         prev_motion = MOVE_STOP;
+                        cur_motion = MOVE_STRAIGHT;
                         kilo_straight_left = calibmsg->straight_left;
                         kilo_straight_right = calibmsg->straight_right;
-                        cur_motion = MOVE_STRAIGHT;
                     }
                     break;
             }

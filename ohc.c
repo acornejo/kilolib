@@ -2,11 +2,10 @@
 #include <avr/interrupt.h> // for ISR
 #include <util/delay.h>    // for _delay_ms
 #include <string.h>        // for memcpy
-#include "message.h"
+#include "ohc.h"           // for message definitions
 #include "message_crc.h"
 #include "message_send.h"
 #include "bootldr.h"
-#include "ohc.h"
 
 uint8_t packet_buffer[PACKET_SIZE];
 uint8_t packet_head = 0;
