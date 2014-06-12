@@ -15,6 +15,7 @@ volatile uint8_t packet_type;
 volatile uint8_t has_new_packet = 0;
 volatile uint8_t tx_mask = 0;
 uint8_t leds_toggle = 0;
+uint8_t *rawmsg;
 message_t msg;
 bootmsg_t *bootmsg;
 gpsmsg_t *gpsmsg;
@@ -71,6 +72,7 @@ int main() {
     tx_mask = ir_mask;
     bootmsg = (bootmsg_t*)msg.data;
     gpsmsg = (gpsmsg_t*)msg.data;
+    rawmsg = (uint8_t*)&msg;
 
     // Use LEDs to flash power on indicator signal.
     uint8_t i;
@@ -97,7 +99,7 @@ int main() {
                 break;
             case PACKET_FORWARDMSG:
                 for (i = 0; i<sizeof(message_t)-sizeof(msg.crc); i++)
-                    msg.rawdata[i] = new_packet[i+2];
+                    rawmsg[i] = new_packet[i+2];
                 msg.crc = message_crc(&msg);
                 while(!has_new_packet) {
                     message_send(&msg);
@@ -109,7 +111,7 @@ int main() {
                 break;
             case PACKET_FORWARDMSGSINGLE:
                 for (i = 0; i<sizeof(message_t)-sizeof(msg.crc); i++)
-                    msg.rawdata[i] = new_packet[i+2];
+                    rawmsg[i] = new_packet[i+2];
                 msg.crc = message_crc(&msg);
                 message_send(&msg);
                 led_port |= led_mask;
@@ -119,7 +121,7 @@ int main() {
                 break;
             case PACKET_FORWARDRAWMSG:
                 for (i = 0; i<sizeof(message_t); i++)
-                    msg.rawdata[i] = new_packet[i+2];
+                    rawmsg[i] = new_packet[i+2];
                 while(!has_new_packet) {
                     message_send(&msg);
                     led_port |= led_mask;

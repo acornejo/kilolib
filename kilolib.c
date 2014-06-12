@@ -46,6 +46,7 @@ uint16_t tx_clock;                 // number of timer cycles we have waited
 uint16_t tx_increment;             // number of timer cycles until next interrupt
 message_t rx_msg;                  // message being received
 distance_measurement_t rx_dist;    // signal strength of message being received
+static uint8_t *rawmsg = (uint8_t*)&rx_msg;
 volatile uint8_t rx_busy;          // flag that signals if message is being received
 uint8_t rx_leadingbit;             // flag that signals start bit
 uint8_t rx_leadingbyte;            // flag that signals start byte
@@ -220,11 +221,6 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
                 break;
         }
     }
-}
-
-void kilo_run() {
-    motors_on();
-    kilo_state = RUNNING;
 }
 
 static inline void process_message() {
@@ -508,7 +504,7 @@ ISR(ANALOG_COMP_vect) {
                         rx_byteindex = 0;
                     }
                 } else {
-                    rx_msg.rawdata[rx_byteindex] = rx_bytevalue;
+                    rawmsg[rx_byteindex] = rx_bytevalue;
                     rx_byteindex++;
                     if (rx_byteindex == sizeof(message_t)) {
                         rx_timer_off();

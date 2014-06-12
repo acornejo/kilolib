@@ -1,3 +1,52 @@
+/****************************************************************************
+ * Copyright (C) 2014 by Alex Cornejo
+ *
+ * This file is part of the Kilobot Library.
+ *                                                                          
+ *   Kilobot Library is free software: you can redistribute it and/or
+ *   modify it under the terms of the GNU Lesser General Public
+ *   License as published by the Free Software Foundation, either
+ *   version 3 of the License, or (at your option) any later version.    
+ *                                                                        
+ *   The Kilobot Library is distributed in the hope that it will be
+ *   useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ *   Lesser General Public License for more details.                    
+ *                                                                          
+ *   You should have received a copy of the GNU Lesser General Public       
+ *   License along with Box.  If not, see <http://www.gnu.org/licenses/>.
+ ****************************************************************************/
+
+/**
+ * @file kilolib.h
+ * @author Alex Cornejo
+ * @date Jun 12, 2014
+ * @brief Definitions of the Kilobot Library API.
+ *
+ * At its core this library provides a function to initialize the
+ * hardware of the kilobots, and another function to setup a basic event
+ * loop programming paradigm (similar to that used in the arduino
+ * software).
+ *
+ * Functions are also provided to read the various sensors (battery
+ * voltage, ambient light and temperature), and to control the
+ * individual pager motors and the RGB led available at each kilobot.
+ *
+ * The user can register callbacks to interact with the messaging
+ * subsystem. There are callbacks for the events of message reception,
+ * message transmission, and notification of successful transmission. By
+ * default every kilobot attempts to send message twice per second.
+ * Advanced users can modify this through the kilo_tx_period variable
+ * (not recommended unless you know what you are doing).
+ *
+ * To prevent collisions the kilobot library uses a basic exponential
+ * backoff strategy with carrier sensing. There are no acknowledgement
+ * packets, and as such a message is considered to be successfuly
+ * transmitted when a kilobot is able transmit a message without
+ * detecting any contention in the channel.
+ */
+
+
 #ifndef __KILOLIB_H__
 #define __KILOLIB_H__
 
@@ -40,7 +89,6 @@ void set_color(uint8_t);
 void delay(uint16_t);
 void kilo_init();
 void kilo_start(void (*setup)(void), void (*program)(void));
-void kilo_run();
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 }
