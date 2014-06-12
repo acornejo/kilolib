@@ -3,13 +3,10 @@
 
 #include <stdint.h>
 
-typedef union {
-    uint8_t rawdata[12];
-    struct {
-        uint8_t data[9];
-        uint8_t type;
-        uint16_t crc;
-    };
+typedef struct {
+    uint8_t data[9];
+    uint8_t type;
+    uint16_t crc;
 } message_t;
 
 typedef enum {
