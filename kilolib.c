@@ -28,9 +28,13 @@
 
 typedef void (*AddressPointer_t)(void) __attribute__ ((noreturn));
 
-static message_rx_t message_rx = 0;
-static message_tx_t message_tx = 0;
-static message_tx_success_t message_tx_success = 0;
+void message_rx_dummy(message_t *m, distance_measurement_t *d) { }
+message_t *message_tx_dummy() { return NULL; }
+void message_tx_success_dummy() {}
+
+message_rx_t kilo_message_rx = message_rx_dummy;
+message_tx_t kilo_message_tx = message_tx_dummy;
+message_tx_success_t kilo_message_tx_success = message_tx_success_dummy;
 
 volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
 uint8_t kilo_turn_left;
@@ -63,11 +67,8 @@ static volatile enum {
  * Initialize all global variables to a known state.
  * Setup all the pins and ports.
  */
-void kilo_init(message_rx_t mrx, message_tx_t mtx, message_tx_success_t mtxsuccess) {
+void kilo_init() {
     cli();
-    message_rx = mrx;
-    message_tx = mtx;
-    message_tx_success = mtxsuccess;
 
     ports_off();
     ports_on();
@@ -131,8 +132,9 @@ enum {
 
 static volatile uint8_t prev_motion = MOVE_STOP, cur_motion = MOVE_STOP;
 
-void kilo_loop(void (*program)(void)) {
+void kilo_start(void (*setup)(void), void (*loop)(void)) {
     int16_t voltage;
+    setup();
     while (1) {
         switch(kilo_state) {
             case SLEEPING:
@@ -190,7 +192,7 @@ void kilo_loop(void (*program)(void)) {
                     set_color(RGB(0,0,0));
                 break;
             case RUNNING:
-                program();
+                loop();
                 break;
             case MOVING:
                 if (cur_motion == MOVE_STOP) {
@@ -225,16 +227,11 @@ void kilo_run() {
     kilo_state = RUNNING;
 }
 
-void kilo_reset() {
-    AddressPointer_t reset= (AddressPointer_t)0x0000;
-    reset();
-}
-
 static inline void process_message() {
     AddressPointer_t reset = (AddressPointer_t)0x0000, bootload = (AddressPointer_t)0x7000;
     calibmsg_t *calibmsg = (calibmsg_t*)&rx_msg.data;
     if (rx_msg.type < SPECIAL) {
-        message_rx(&rx_msg, &rx_dist);
+        kilo_message_rx(&rx_msg, &rx_dist);
         return;
     }
     if (rx_msg.type != READUID && rx_msg.type != RUN && rx_msg.type != CALIB)
@@ -329,6 +326,13 @@ static inline void process_message() {
     }
 }
 
+void delay(uint16_t ms) {
+    while (ms > 0) {
+        _delay_ms(1);
+        ms--;
+    }
+}
+
 void set_motors(uint8_t ccw, uint8_t cw) {
     OCR2A = ccw;
     OCR2B = cw;
@@ -388,10 +392,10 @@ ISR(TIMER0_COMPA_vect) {
     kilo_ticks++;
 
     if(!rx_busy && tx_clock>kilo_tx_period && kilo_state == RUNNING) {
-        message_t *msg = message_tx();
+        message_t *msg = kilo_message_tx();
         if (msg) {
             if (message_send(msg)) {
-                message_tx_success();
+                kilo_message_tx_success();
                 tx_clock = 0;
             } else {
                 tx_increment = rand()&0xFF;
@@ -404,7 +408,7 @@ ISR(TIMER0_COMPA_vect) {
 #else// BOOTLOADER
 
 static inline void process_message() {
-    message_rx(&rx_msg, &rx_dist);
+    kilo_message_rx(&rx_msg, &rx_dist);
 }
 
 EMPTY_INTERRUPT(TIMER0_COMPA_vect)

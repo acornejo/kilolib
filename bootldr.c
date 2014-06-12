@@ -85,8 +85,9 @@ int main() {
     page_address = 0;
     page_byte_count = 0;
     sei();
+    kilo_message_rx = message_rx;
     // initialize hardware
-    kilo_init(message_rx, 0, 0);
+    kilo_init();
 
     // flash blue led
     while(1) {

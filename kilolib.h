@@ -24,6 +24,9 @@ extern uint8_t kilo_turn_left;
 extern uint8_t kilo_turn_right;
 extern uint8_t kilo_straight_left;
 extern uint8_t kilo_straight_right;
+extern message_rx_t kilo_message_rx;
+extern message_tx_t kilo_message_tx;
+extern message_tx_success_t kilo_message_tx_success;
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 extern "C" {
@@ -34,10 +37,10 @@ int16_t get_temperature();
 int16_t get_ambientlight();
 void set_motors(uint8_t, uint8_t);
 void set_color(uint8_t);
-void kilo_init(message_rx_t, message_tx_t, message_tx_success_t);
-void kilo_loop(void (*program)(void));
+void delay(uint16_t);
+void kilo_init();
+void kilo_start(void (*setup)(void), void (*program)(void));
 void kilo_run();
-void kilo_reset();
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 }

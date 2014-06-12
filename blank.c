@@ -9,7 +9,13 @@ message_t *message_tx() { return '\0'; }
 // Called upon a successful message transmission.
 void message_tx_success() { }
 
-void program_loop() {
+void setup() {
+    // put your setup code here, will be run once at the beginning
+}
+
+void loop() {
+    // put your main code here, will be run repeatedly
+
     static int state = 0;
     static uint32_t last_change=0;
     if (kilo_ticks > last_change + 32) {
@@ -50,7 +56,7 @@ void program_loop() {
 
 int main() {
     kilo_init(message_rx, message_tx, message_tx_success);
-    kilo_loop(program_loop);
+    kilo_start(setup, loop);
 
     return 0;
 }
