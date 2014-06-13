@@ -1,6 +1,6 @@
 all: bootldr blank ohc ohc-arduino-8mhz ohc-arduino-16mhz
 
-.PHONY: bootldr blank ohc ohc-arduino-8mhz ohc-arduino-16mhz
+.PHONY: docs bootldr blank ohc ohc-arduino-8mhz ohc-arduino-16mhz
 KILOLIB = build/kilolib.a
 bootldr: build/bootldr.elf build/bootldr.hex build/bootldr.lss
 blank: build/blank.elf build/blank.hex build/blank.lss
@@ -73,6 +73,10 @@ program-boot: build/bootldr.hex
 
 program-blank: build/blank.hex build/bootldr.hex
 	$(AVRUP) -p m328p $(PFLAGS) -U "flash:w:build/blank.hex:i" -U "flash:w:build/bootldr.hex"
+
+docs:
+	cat message.h kilolib.h message_crc.h | grep -v "^\#" > docs/kilolib.h
+	(cd docs; doxygen)
 
 clean:
 	rm -fR build

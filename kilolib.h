@@ -1,54 +1,35 @@
-/****************************************************************************
- * Copyright (C) 2014 by Alex Cornejo
- *
- * This file is part of the Kilobot Library.
- *                                                                          
- *   Kilobot Library is free software: you can redistribute it and/or
- *   modify it under the terms of the GNU Lesser General Public
- *   License as published by the Free Software Foundation, either
- *   version 3 of the License, or (at your option) any later version.    
- *                                                                        
- *   The Kilobot Library is distributed in the hope that it will be
- *   useful, but WITHOUT ANY WARRANTY; without even the implied warranty
- *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- *   Lesser General Public License for more details.                    
- *                                                                          
- *   You should have received a copy of the GNU Lesser General Public       
- *   License along with Box.  If not, see <http://www.gnu.org/licenses/>.
- ****************************************************************************/
+#ifndef __KILOLIB_H__
+#define __KILOLIB_H__
 
 /**
  * @file kilolib.h
- * @author Alex Cornejo
- * @date Jun 12, 2014
- * @brief Definitions of the Kilobot Library API.
+ * @mainpage Kilobot Library API
  *
- * At its core this library provides a function to initialize the
- * hardware of the kilobots, and another function to setup a basic event
- * loop programming paradigm (similar to that used in the arduino
- * software).
+ * At its core the Kilobot Library library provides the function
+ * kilo_init() to initialize the hardware of the kilobots, and the
+ * function kilo_start() that uses a basic event loop programming
+ * paradigm (this relies on a setup and a loop callback, similar to
+ * those used in the arduino software).
  *
- * Functions are also provided to read the various sensors (battery
- * voltage, ambient light and temperature), and to control the
- * individual pager motors and the RGB led available at each kilobot.
+ * The API also provides functions to read the various sensors available
+ * to the kilobots (get_ambientlight(), get_voltage(), get_temperature()), and
+ * also to control the individual pager motors and the RGB led present
+ * in each kilobot (set_motors(), set_color()).
  *
  * The user can register callbacks to interact with the messaging
- * subsystem. There are callbacks for the events of message reception,
- * message transmission, and notification of successful transmission. By
- * default every kilobot attempts to send message twice per second.
- * Advanced users can modify this through the kilo_tx_period variable
- * (not recommended unless you know what you are doing).
+ * subsystem. There are callbacks for the events of message reception
+ * (`kilo_message_rx`), message transmission (`kilo_message_tx`), and
+ * notification of successful transmission (`kilo_message_tx_success`).
+ * By default every kilobot attempts to send message twice per second.
+ * Advanced users can modify this through the `kilo_tx_period` variable,
+ * although this is discouraged unless you know what you are doing.
  *
  * To prevent collisions the kilobot library uses a basic exponential
- * backoff strategy with carrier sensing. There are no acknowledgement
- * packets, and as such a message is considered to be successfuly
+ * back-off strategy with carrier sensing. There are no acknowledgement
+ * packets, and as such a message is considered to be successfully
  * transmitted when a kilobot is able transmit a message without
  * detecting any contention in the channel.
  */
-
-
-#ifndef __KILOLIB_H__
-#define __KILOLIB_H__
 
 #include <stdint.h>
 #include "message.h"
@@ -57,9 +38,21 @@
 #define RGB(r,g,b) (r&3)|(((g&3)<<2))|((b&3)<<4)
 #define TICKS_PER_SEC 31
 
+/**
+ * @brief Distance measurement.
+ *
+ * Every time a message is received by a kilobot, it collects two 10 bit
+ * measurements that represent the signal strength of the received
+ * message after going through an operational amplifier. This data
+ * structure stores these two measurements.
+ *
+ * Using these two measurements it is possible to estimate the distance
+ * of the sender.
+ */
+
 typedef struct {
-    int16_t low_gain;
-    int16_t high_gain;
+    int16_t low_gain;  ///< Low gain 10-bit signal-strength measurement.
+    int16_t high_gain; ///< High gain 10-bit signal-strength measurement.
 } distance_measurement_t;
 
 typedef void (*message_rx_t)(message_t *, distance_measurement_t *d);
@@ -81,14 +74,190 @@ extern message_tx_success_t kilo_message_tx_success;
 extern "C" {
 #endif
 
-int16_t get_voltage();
-int16_t get_temperature();
+/**
+ * @brief Pauses the program for the specified amount of time.
+ *
+ * This function receives as an argument a positive 16-bit integer @p ms
+ * that represents the number of milliseconds for which to pause the
+ * program.
+ *
+ * @param ms Number of milliseconds to pause the program (there are 1000
+ * milliseconds in a second).
+ *
+ * @note While its easy to create short delays in the program execution
+ * using this function, the processor of the kilobot cannot perform
+ * other tasks during this delay functions. In general its preferable to
+ * use timers to create delays.
+ * @see kilo_ticks
+ */
+void delay(uint16_t ms);
+
+/**
+ * @brief Read the amount of ambient light.
+ *
+ * This function returns a 10-bit measurement (0 to 1023) that
+ * represents the amount of ambient light detected by the photo diode
+ * available in the kilobot.
+ *
+ * @return 10-bit measurement of ambient light.
+ * @note All measurements in the kilobot are performed using the same
+ * analog-to-digital conversion (ADC) unit of the AVR processor. This
+ * ADC unit requires a certain amount of time to change the source of
+ * the measurement. As such, if a message is received while the ambient
+ * light is being measured, it is possible for either the ambient light
+ * measurements or the distance measurements of the message to be
+ * inaccurate.
+ */
 int16_t get_ambientlight();
-void set_motors(uint8_t, uint8_t);
-void set_color(uint8_t);
-void delay(uint16_t);
+
+/**
+ * @brief Read the amount of battery voltage.
+ *
+ * This function returns a 10-bit measurement (0 to 1023) that
+ * represents the amount of voltage that remains in the battery. It can
+ * be used to determine if the kilobot should be recharged.
+ *
+ * @return 10-bit measurement of battery voltage.
+ */
+int16_t get_voltage();
+
+/**
+ * @brief Read the temperature of the kilobot.
+ *
+ * This function returns a 10-bit measurement (0 to 1023) that
+ * represents the temperature of the board of the kilobot. This sensor
+ * is only capable of detecting large temperature changes (in the order
+ * of 2 Celsius degrees or more).
+ *
+ * As such, it is only useful only to detect drastic changes in the
+ * operating environment of the kilobot.
+ */
+int16_t get_temperature();
+
+/**
+ * @brief Set the power of each motor.
+ *
+ * The power received by the left and right motor is controlled using
+ * hardware pulse-width-modulation (PWM) and can be set using this
+ * function.
+ *
+ * The parameter @p left and @p right are 8-bit unsigned integers (0 to
+ * 255) that control the duty-cycle of the PWM signal from 0% to 100%.
+ * In other words, setting a motor to 0% duty-cycle equates to running
+ * off the motor, and setting a motor to 100% duty-cycle equates to
+ * running the motor at full power. For the most part, motors should
+ * only be set to the calibrated values `kilo_turn_left`,
+ * `kilo_turn_right`, `kilo_straight_left` and `kilo_straight_right`.
+ *
+ * When a motor transitions from being off (0% duty cycle) to being on
+ * (> 10% duty cycle) it must first be turned on at full-speed for 15ms
+ * to overcome the effects of static friction. 
+ *
+ * @see kilo_turn_left
+ * @see kilo_turn_right
+ * @see kilo_straight_left
+ * @see kilo_straight_right
+ *
+ * @code
+ * // turn motors off
+ * set_motors(0, 0);
+ * // spin up left motor for 15ms
+ * set_motors(255, 0);
+ * delay(15);
+ * // turn the kilobot left for 2 seconds
+ * set_motors(skilo_turn_left, 0);
+ * delay(2000);
+ * @endcode
+ *
+ * @param left 8-bit integer to control left motor duty-cycle.
+ * @param right 8-bit integer to control right motor duty-cycle.
+ *
+ * @warning It is important that in a 2 second interval no motor is at
+ * 100% duty-cycle (255) for more than 50ms at a time, since this might
+ * cause the motors to fail permanently. It is recommended that during
+ * regular operation the motors are never run to more than a 35%
+ * duty-cycle (90).
+ */
+void set_motors(uint8_t left, uint8_t right);
+
+/**
+ * @brief Set the output of the RGB led.
+ *
+ * This function receives an 8-bit unsigned integer whose bits are used
+ * to determine the output of the RGB led mounted on the kilobot. Each
+ * color has a 2-bit resolution which allows set each color channel
+ * independently from off (0) to full-brightness (3).
+ *
+ * The convenience macro `RGB` can be used to set the individual bits.
+ * For instance `RGB(0,0,0)` turns all color channels off, and therefore
+ * the RGB led remains off. Meanwhile `RGB(0,3,0)` turns the green
+ * channel to full intensity and turns all other channels off, which
+ * results in an RGB led displaying a bright green color.
+ *
+ * @param color Output of the led. The recommended usage is through the
+ * `RGB` macro.
+ *
+ * @code
+ * // blink dim RED once per second
+ * while (1) {
+ *   set_color(RGB(1,0,0));
+ *   delay(500);
+ *   set_color(RGB(0,0,0));
+ *   delay(500);
+ * }
+ * @endcode
+ */
+void set_color(uint8_t color);
+
+/**
+ * @brief Initialize kilobot hardware.
+ *
+ * This function initializes all hardware of the kilobots. This includes
+ * calibrating the hardware oscillator, setting hardware timers,
+ * configuring ports, setting up analog-to-digital converters,
+ * registering system interrupts and the initializing the messaging
+ * subsystem.
+ * 
+ * It is recommended that you call this function as early as possible
+ * inside the `main` function of your program.
+ */
 void kilo_init();
-void kilo_start(void (*setup)(void), void (*program)(void));
+
+/**
+ * @brief Start kilobot event loop.
+ *
+ * This function receives two parameters. The first parameter @p setup
+ * is a function which will be called once to perform any initialization
+ * required by your user program. The second parameter @p loop is a
+ * function that will be called repeatedly to perform any computations
+ * required by your user program./
+ *
+ * Using the overhead controller it is possible to trigger events such
+ * as program start/resume, program pause, and program restart.
+ *
+ * @param setup put your setup code here, to be run only once
+ * @param loop  put your main code here, will be run repeatedly
+ *
+ * @code
+ *
+ * uint32_t counter;
+ *
+ * void setup() {
+ *    counter = 0;
+ * }
+ *
+ * void loop() {
+ *    counter++;
+ * }
+ *
+ * int main() {
+ *   kilo_init();
+ *   kilo_start(setup, loop);
+ *   return 0;
+ * }
+ * @endcode
+ */
+void kilo_start(void (*setup)(void), void (*loop)(void));
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 }

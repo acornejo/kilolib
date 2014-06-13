@@ -1,3 +1,5 @@
+/** @internal */
+
 typedef struct {
     uint8_t page_address;
     uint8_t page_offset;

@@ -64,10 +64,6 @@ static volatile enum {
     MOVING
 } kilo_state;
 
-/**
- * Initialize all global variables to a known state.
- * Setup all the pins and ports.
- */
 void kilo_init() {
     cli();
 
@@ -226,7 +222,7 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
 static inline void process_message() {
     AddressPointer_t reset = (AddressPointer_t)0x0000, bootload = (AddressPointer_t)0x7000;
     calibmsg_t *calibmsg = (calibmsg_t*)&rx_msg.data;
-    if (rx_msg.type < SPECIAL) {
+    if (rx_msg.type < BOOT) {
         kilo_message_rx(&rx_msg, &rx_dist);
         return;
     }
