@@ -18,8 +18,8 @@
  *
  * The user can register callbacks to interact with the messaging
  * subsystem. There are callbacks for the events of message reception
- * (`kilo_message_rx`), message transmission (`kilo_message_tx`), and
- * notification of successful transmission (`kilo_message_tx_success`).
+ * (::kilo_message_rx), message transmission (::kilo_message_tx), and
+ * notification of successful transmission (::kilo_message_tx_success).
  * By default every kilobot attempts to send message twice per second.
  * Advanced users can modify this through the `kilo_tx_period` variable,
  * although this is discouraged unless you know what you are doing.
@@ -59,15 +59,203 @@ typedef void (*message_rx_t)(message_t *, distance_measurement_t *d);
 typedef message_t *(*message_tx_t)(void);
 typedef void (*message_tx_success_t)(void);
 
+/**
+ * @brief Kilobot clock variable.
+ *
+ * This variable holds a 32-bit unsigned positive integer. This variable
+ * is initialized to zero whenever the program run at the kilobot is
+ * reset (or when the kilobot is first turned on). It is incremented
+ * approximately 32 times per second, or once every 30ms. 
+ *
+ * @code
+ *
+ * void setup() {
+ *     last_changed = kilo_ticks;
+ * }
+ *
+ * // blink the LED green for 50ms, once every 2 seconds.
+ * void loop() {
+ *     if (kilo_ticks > last_changed + 64) {
+ *         last_changed = kilo_ticks;
+ *         set_color(RGB(0,1,0));
+ *         delay(50);
+ *         set_color(RGB(0,0,0));
+ *     }
+ * }
+ *
+ * int main() {
+ *     kilo_init();
+ *     kilo_start(setup, loop);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ */
+
 extern volatile uint32_t kilo_ticks;
 extern volatile uint16_t kilo_tx_period;
+/**
+ * @brief Kilobot unique identifier.
+ *
+ * This variable holds a 16-bit positive integer which is designated as
+ * the kilobot's unique identifier during calibration.
+ */
 extern uint16_t kilo_uid;
+/**
+ * @brief Calibrated turn left duty-cycle.
+ *
+ * This variable holds an 8-bit positive integer which is the calibrated
+ * duty-cycle for turning left.
+ *
+ * @see set_motors
+ */
 extern uint8_t kilo_turn_left;
+/**
+ * @brief Calibrated turn right duty-cycle.
+ *
+ * This variable holds an 8-bit positive integer which is the calibrated
+ * duty-cycle for turning right.
+ *
+ * @see set_motors
+ */
 extern uint8_t kilo_turn_right;
+/**
+ * @brief Calibrated straight (left motor) duty-cycle.
+ *
+ * This variable holds an 8-bit positive integer which is the calibrated
+ * duty-cycle used for the left motor to go straight. This must be used
+ * in conjuction with kilo_straight_right.
+ *
+ * @see set_motors, kilo_straight_right
+ */
 extern uint8_t kilo_straight_left;
+/**
+ * @brief Calibrated straight (right motor) duty-cycle.
+ *
+ * This variable holds an 8-bit positive integer which is the calibrated
+ * duty-cycle used for the right motor to go straight. This must be used
+ * in conjuction with kilo_straight_left.
+ *
+ * @see set_motors, kilo_straight_left
+ */
 extern uint8_t kilo_straight_right;
+
+/**
+ * @brief Callback for message receiption.
+ *
+ * This callback is triggered every time a message is succesfully
+ * decoded. The callback receives two parameters, a pointer to the
+ * message decoded, and a pointer to the distance measurements from the
+ * message originator.
+ *
+ * @code
+ *  uint8_t recvd_message = 0;
+ *
+ *  // receive message callback
+ *  void rx_message(message_t *msg, distance_message_t *dist) {
+ *      recvd_message = 1;
+ *  }
+ *
+ *  void setup() {
+ *      recvd_message = 0;
+ *  }
+ *
+ *  // blink green when a new message is received
+ *  void loop() {
+ *      if ( recvd_message ) {
+ *          recvd_message = 0;
+ *          set_color(RGB(0,1,0));
+ *          delay(100);
+ *          set_color(RGB(0,0,0));
+ *      }
+ *  }
+ *
+ *  int main() {
+ *      kilo_init();
+ *      // register message callback
+ *      kilo_message_rx = rx_message;
+ *      kilo_start(setup, loop);
+ *
+ *      return 0;
+ *  }
+ * @endcode
+ *
+ * @note You must register a message callback before calling kilo_start.
+ * @see message_t, message_crc, kilo_message_tx, kilo_message_tx_success
+ */
 extern message_rx_t kilo_message_rx;
+/**
+ * @brief Callback for message transmission.
+ *
+ * This callback is triggered every time a message is scheduled for
+ * transmission (roughly twice every second). This callback returns a
+ * pointer to the message that should be sent; if the pointer is null,
+ * the no message is sent.
+ *
+ * @code
+ *
+ * message_t msg;
+ * uint8_t sent_message;
+ *
+ * // message transmission callback
+ * message_t *tx_message() {
+ *     return &msg;
+ * }
+ *
+ * // successful transmission callback
+ * void tx_message_success() {
+ *     sent_message = 1;
+ * }
+ *
+ * void setup() {
+ *    msg.type = NORMAL;
+ *    msg.crc = message_crc(&msg);
+ * }
+ *
+ * // blink red when a new message is sent
+ * void loop() {
+ *     if ( sent_message ) {
+ *         sent_message = 0;
+ *         set_color(RGB(1,0,0));
+ *         delay(100);
+ *         set_color(RGB(0,0,0));
+ *     
+ *     }
+ * }
+ *
+ * int main() {
+ *     kilo_init();
+ *     // register message transmission calback
+ *     kilo_message_tx = tx_message;
+ *     // register tranmsission success callback
+ *     kilo_message_tx_success = tx_message_success;
+ *     kilo_start(setup, loop);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @note The message returned by this callback must have a valid CRC
+ * value computed using the message_crc() function.
+ *
+ * @see message_t, message_crc, kilo_message_tx, kilo_message_tx_success
+ */
 extern message_tx_t kilo_message_tx;
+
+/**
+ * @brief Callback for successful message transmission.
+ *
+ * This callback is triggered every time a message is sent
+ * successfully. It receives no parameters and returns no values.
+ *
+ * @note For example usage see ::kilo_message_tx .
+ * @warning The message subsystem has no acknowledgements, therefore
+ * successful message reception is not guaranteed. Instead the
+ * successful message callback is called when a message is transmitted
+ * and no contention is detected on the channel.
+ *
+ * @see message_t, message_crc, kilo_message_tx, kilo_message_tx_success
+ */
 extern message_tx_success_t kilo_message_tx_success;
 
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
@@ -165,7 +353,10 @@ int16_t get_temperature();
  * set_motors(255, 0);
  * delay(15);
  * // turn the kilobot left for 2 seconds
- * set_motors(skilo_turn_left, 0);
+ * set_motors(kilo_turn_left, 0);
+ * delay(2000);
+ * // go straight for 2 seconds
+ * set_motors(kilo_straight_left, kilo_straight_right);
  * delay(2000);
  * @endcode
  *
@@ -230,10 +421,11 @@ void kilo_init();
  * is a function which will be called once to perform any initialization
  * required by your user program. The second parameter @p loop is a
  * function that will be called repeatedly to perform any computations
- * required by your user program./
+ * required by your user program.
  *
- * Using the overhead controller it is possible to trigger events such
- * as program start/resume, program pause, and program restart.
+ * Using the overhead controller it is possible to interrupt the event
+ * loop to trigger events such as program start/resume, program pause,
+ * and program restart.
  *
  * @param setup put your setup code here, to be run only once
  * @param loop  put your main code here, will be run repeatedly
