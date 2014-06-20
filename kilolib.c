@@ -50,6 +50,8 @@ volatile uint8_t tx_mask;
 volatile uint16_t kilo_tx_period;
 
 #ifndef BOOTLOADER
+uint16_t tx_clock;                 // number of timer cycles we have waited
+uint16_t tx_increment;             // number of timer cycles until next interrupt
 volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
 uint16_t kilo_uid;                 // unique identifier (stored in EEPROM)
 uint8_t kilo_turn_left;
@@ -58,8 +60,6 @@ uint8_t kilo_straight_left;
 uint8_t kilo_straight_right;
 uint16_t kilo_irhigh[14];
 uint16_t kilo_irlow[14];
-uint16_t tx_clock;                 // number of timer cycles we have waited
-uint16_t tx_increment;             // number of timer cycles until next interrupt
 #endif
 
 static volatile enum {
@@ -108,10 +108,10 @@ void kilo_init() {
     kilo_straight_right = eeprom_read_byte(EEPROM_RIGHT_STRAIGHT);
 
     uint8_t i;
-	for (i=0; i<14; i++) {
-		kilo_irlow[i]=(eeprom_read_byte(EEPROM_IRLOW + i*2) <<8) | eeprom_read_byte(EEPROM_IRLOW + i*2+1);
-		kilo_irhigh[i]=(eeprom_read_byte(EEPROM_IRHIGH + i*2) <<8) | eeprom_read_byte(EEPROM_IRHIGH + i*2+1);
-	}
+    for (i=0; i<14; i++) {
+        kilo_irlow[i]=(eeprom_read_byte(EEPROM_IRLOW + i*2) <<8) | eeprom_read_byte(EEPROM_IRLOW + i*2+1);
+        kilo_irhigh[i]=(eeprom_read_byte(EEPROM_IRHIGH + i*2) <<8) | eeprom_read_byte(EEPROM_IRHIGH + i*2+1);
+    }
 #endif
     sei();
 }
@@ -389,6 +389,66 @@ int16_t get_voltage() {
         sei();                                    // reenable interrupts
     }
     return voltage;
+}
+
+uint8_t estimate_distance(const distance_measurement_t *dist) {
+    uint8_t i;
+    uint8_t index_high=13;
+    uint8_t index_low=255;
+    uint8_t dist_high=255;
+    uint8_t dist_low=255;
+
+    if (dist->high_gain < 900) {
+        if (dist->high_gain > kilo_irhigh[0]) {
+            dist_high=0;
+        } else {
+            for (i=1; i<14; i++) {
+                if (dist->high_gain > kilo_irhigh[i]) {
+                    index_high = i;
+                    break;
+                }
+            }
+
+            double slope=(kilo_irhigh[index_high]-kilo_irhigh[index_high-1])/0.5;
+            double b=(double)kilo_irhigh[index_high]-(double)slope*((double)index_high*(double)0.5+(double)0.0);
+            b=(((((double)dist->high_gain-(double)b)*(double)10)));
+            b=((int)((int)b/(int)slope));
+            dist_high=b;
+        }
+    }
+
+    if (dist->high_gain > 700) {
+        if (dist->low_gain > kilo_irlow[0]) {
+            dist_low=0;
+        } else {
+            for(i=1; i<14; i++) {
+                if(dist->low_gain > kilo_irlow[i]) {
+                    index_low = i;
+                    break;
+                }
+            }
+
+            if(index_low == 255) {
+                dist_low=90;
+            } else {
+                double slope=(kilo_irlow[index_low]-kilo_irlow[index_low-1])/0.5;
+                double b=(double)kilo_irlow[index_low]-(double)slope*((double)index_low*(double)0.5+(double)0.0);
+                b=(((((double)dist->low_gain-(double)b)*(double)10)));
+                b=((int)((int)b/(int)slope));
+                dist_low=b;
+            }
+        }
+    }
+
+    if (dist_low != 255) {
+        if (dist_high != 255) {
+            return 33 + ((double)dist_high*(900.0-dist->high_gain)+(double)dist_low*(dist->high_gain-700.0))/200.0;
+        } else {
+            return 33 + dist_low;
+        }
+    } else {
+        return 33 + dist_high;
+    }
 }
 
 /**
