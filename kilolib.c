@@ -330,6 +330,11 @@ void set_motors(uint8_t ccw, uint8_t cw) {
     OCR2B = cw;
 }
 
+void spinup_motors() {
+    set_motors(255, 255);
+    _delay_ms(15);
+}
+
 int16_t get_ambientlight() {
     int16_t light = -1;
     if (!rx_busy) {

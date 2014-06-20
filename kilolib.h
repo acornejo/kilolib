@@ -372,6 +372,29 @@ int16_t get_temperature();
 void set_motors(uint8_t left, uint8_t right);
 
 /**
+ * @brief Turn motors at full-speed for 15ms.
+ *
+ * When the robot transitions from being stationary (motors off) to
+ * being mobile (one or both motors on) it must overcome the effects of
+ * static friction. For that purpose, the motors can be turned-pn at
+ * full-speed during 15ms. This function does precisely that, and is
+ * equivalent to the following code:
+ *
+ * @code
+ * set_motors(255, 255);
+ * delay(15);
+ * @endcode
+ *
+ * @note Observe that the spinup() function turns both motors on. In
+ * some cases (when turning left or turning right) this is not required,
+ * and thus to achieve smoother motion you can do manual `spinup` of a
+ * motor. See set_motors() for an example.
+ *
+ * @see set_motors
+ */
+void spinup_motors();
+
+/**
  * @brief Set the output of the RGB led.
  *
  * This function receives an 8-bit unsigned integer whose bits are used
