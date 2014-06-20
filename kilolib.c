@@ -13,6 +13,8 @@
 
 #define EEPROM_OSCCAL         (uint8_t*)0x01
 #define EEPROM_TXMASK         (uint8_t*)0x90
+#define EEPROM_IRLOW          (uint8_t*)0x20
+#define EEPROM_IRHIGH         (uint8_t*)0x50
 #define EEPROM_UID            (uint8_t*)0xB0
 #define EEPROM_LEFT_ROTATE    (uint8_t*)0x05
 #define EEPROM_RIGHT_ROTATE   (uint8_t*)0x09
@@ -36,14 +38,6 @@ message_rx_t kilo_message_rx = message_rx_dummy;
 message_tx_t kilo_message_tx = message_tx_dummy;
 message_tx_success_t kilo_message_tx_success = message_tx_success_dummy;
 
-volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
-uint8_t kilo_turn_left;
-uint8_t kilo_turn_right;
-uint8_t kilo_straight_left;
-uint8_t kilo_straight_right;
-uint16_t kilo_uid;                 // unique identifier (stored in EEPROM)
-uint16_t tx_clock;                 // number of timer cycles we have waited
-uint16_t tx_increment;             // number of timer cycles until next interrupt
 message_t rx_msg;                  // message being received
 distance_measurement_t rx_dist;    // signal strength of message being received
 static uint8_t *rawmsg = (uint8_t*)&rx_msg;
@@ -54,6 +48,19 @@ uint8_t rx_byteindex;              // index to the current byte being decoded
 uint8_t rx_bytevalue;              // value of the current byte being decoded
 volatile uint8_t tx_mask;
 volatile uint16_t kilo_tx_period;
+
+#ifndef BOOTLOADER
+volatile uint32_t kilo_ticks;      // internal clock (updated in tx ISR)
+uint16_t kilo_uid;                 // unique identifier (stored in EEPROM)
+uint8_t kilo_turn_left;
+uint8_t kilo_turn_right;
+uint8_t kilo_straight_left;
+uint8_t kilo_straight_right;
+uint16_t kilo_irhigh[14];
+uint16_t kilo_irlow[14];
+uint16_t tx_clock;                 // number of timer cycles we have waited
+uint16_t tx_increment;             // number of timer cycles until next interrupt
+#endif
 
 static volatile enum {
     SLEEPING,
@@ -99,6 +106,12 @@ void kilo_init() {
     kilo_turn_right = eeprom_read_byte(EEPROM_RIGHT_ROTATE);
     kilo_straight_left = eeprom_read_byte(EEPROM_LEFT_STRAIGHT);
     kilo_straight_right = eeprom_read_byte(EEPROM_RIGHT_STRAIGHT);
+
+    uint8_t i;
+	for (i=0; i<14; i++) {
+		kilo_irlow[i]=(eeprom_read_byte(EEPROM_IRLOW + i*2) <<8) | eeprom_read_byte(EEPROM_IRLOW + i*2+1);
+		kilo_irhigh[i]=(eeprom_read_byte(EEPROM_IRHIGH + i*2) <<8) | eeprom_read_byte(EEPROM_IRHIGH + i*2+1);
+	}
 #endif
     sei();
 }

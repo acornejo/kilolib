@@ -29,6 +29,6 @@
  * as being corrupt and discarded.
  */
 
-uint16_t message_crc(message_t *msg);
+uint16_t message_crc(const message_t *msg);
 
 #endif//__MESSAGES_CRC_H__

@@ -263,6 +263,25 @@ extern "C" {
 #endif
 
 /**
+ * @brief Estimate distance in mm based on signal strength measurements.
+ *
+ * This function receives as an argument the signal strength measurements @p d taken
+ * during message reception, and returns a positive integer that
+ * respresents the distance estimate in mm towards the robot that
+ * originated the message.
+ *
+ * @param d Signal strength measurement for a message.
+ * @return Positive integer with distance estimate in mm.
+ *
+ * @note Internally this function relies on a distance calibration table
+ * stored on the EEPROM memory of the kilobots. This table is populated
+ * using a special calibration rig. Robots purchased from Kteam come
+ * precalibrated.
+ */
+
+uint8_t estimate_distance(const distance_measurement_t *d);
+
+/**
  * @brief Pauses the program for the specified amount of time.
  *
  * This function receives as an argument a positive 16-bit integer @p ms
