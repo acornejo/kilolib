@@ -66,6 +66,7 @@ static volatile enum {
     SLEEPING,
     IDLE,
     BATTERY,
+    SETUP,
     RUNNING,
     CHARGING,
     MOVING
@@ -144,7 +145,7 @@ static volatile uint8_t prev_motion = MOVE_STOP, cur_motion = MOVE_STOP;
 
 void kilo_start(void (*setup)(void), void (*loop)(void)) {
     int16_t voltage;
-    setup();
+    uint8_t has_setup = 0;
     while (1) {
         switch(kilo_state) {
             case SLEEPING:
@@ -201,6 +202,12 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
                 } else
                     set_color(RGB(0,0,0));
                 break;
+            case SETUP:
+                if (!has_setup) {
+                    setup();
+                    has_setup = 1;
+                }
+                kilo_state = RUNNING;
             case RUNNING:
                 loop();
                 break;
@@ -262,9 +269,9 @@ static inline void process_message() {
             kilo_state = BATTERY;
             break;
         case RUN:
-            if (kilo_state != RUNNING) {
+            if (kilo_state != SETUP && kilo_state != RUNNING) {
                 motors_on();
-                kilo_state = RUNNING;
+                kilo_state = SETUP;
             }
             break;
         case CALIB:
@@ -345,7 +352,7 @@ void set_motors(uint8_t ccw, uint8_t cw) {
 
 void spinup_motors() {
     set_motors(255, 255);
-    _delay_ms(15);
+    delay(15);
 }
 
 int16_t get_ambientlight() {
@@ -375,6 +382,43 @@ int16_t get_temperature() {
         sei();                                    // reenable interrupts
     }
     return temp;
+}
+
+uint8_t rand_hard() {
+    uint8_t num = 0;
+    uint8_t a, b, i, tries;
+    for (i = 0; i < 8; i++) {
+        tries = 0;
+        do {
+            cli();
+            adc_setup_conversion(6);
+            adc_start_conversion();
+            adc_finish_conversion();
+            a = ADCW&0x1;
+            adc_start_conversion();
+            adc_finish_conversion();
+            b = ADCW&0x1;
+            adc_trigger_high_gain();
+            sei();
+            tries++;
+        } while (a == b && tries < 128);
+        if (a)
+            num |= (1<<i);
+    }
+    return num;
+}
+
+static uint8_t seed=0xaa, accumulator = 0;
+
+uint8_t rand_soft() {
+    seed ^= seed<<3;
+    seed ^= seed>>5;
+    seed ^= accumulator++>>2;
+    return seed;
+}
+
+void rand_seed(uint8_t s) {
+    seed = s;
 }
 
 int16_t get_voltage() {

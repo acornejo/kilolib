@@ -300,6 +300,43 @@ uint8_t estimate_distance(const distance_measurement_t *d);
 void delay(uint16_t ms);
 
 /**
+ * @brief Hardware random number generator.
+ *
+ * This function uses the analog-to-digital converter to generate an
+ * 8-bit random number. Specifically, the robot measures its own battery
+ * voltage and extracts randomness from the least significant bit by
+ * using Von Neumann's fair-coin algorithm. By its nature, this function
+ * is slow, use rand_soft() if you want a faster alternative, and you
+ * can seed the software random generator using the output of
+ * rand_hard().
+ *
+ * @see rand_soft, rand_seed
+ * @return 8-bit random number.
+ */
+uint8_t rand_hard();
+
+/**
+ * @brief Software random number generator.
+ *
+ * This function implements a linear-shift-register to implement an
+ * 8-bit pseudo-random number generator. The seed of the random number
+ * generator can be controlled through rand_seed().
+ *
+ * @return 8-bit random number.
+ */
+uint8_t rand_soft();
+
+/**
+ * @brief Seed software random number generator.
+ *
+ * This function changes the seed used by the software random
+ * number generator implemented by rand_soft().
+ *
+ * @param 8-bit random seed.
+ */
+void rand_seed(uint8_t seed);
+
+/**
  * @brief Read the amount of ambient light.
  *
  * This function returns a 10-bit measurement (0 to 1023) that
