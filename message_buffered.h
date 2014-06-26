@@ -67,10 +67,12 @@ void txbuffer_pop() {
         RB_popfront(txbuffer);
 }
 
-inline void kilo_init_buffered() {
+inline void kilo_message_buffered() {
     RB_init(rxbuffer);
     RB_init(txbuffer);
-    kilo_init(rxbuffer_push, txbuffer_peek, txbuffer_pop);
+    kilo_message_rx = rxbuffer_push;
+    kilo_message_tx = txbuffer_peek;
+    kilo_message_tx_success = txbuffer_pop;
 }
 
 #endif//__MESSAGE_BUFFERED_H__
