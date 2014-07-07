@@ -152,7 +152,7 @@ extern uint8_t kilo_straight_right;
  *  uint8_t recvd_message = 0;
  *
  *  // receive message callback
- *  void rx_message(message_t *msg, distance_message_t *dist) {
+ *  void rx_message(message_t *msg, distance_measurement_t *d) {
  *      recvd_message = 1;
  *  }
  *
