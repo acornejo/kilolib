@@ -16,10 +16,10 @@
 #define EEPROM_IRLOW          (uint8_t*)0x20
 #define EEPROM_IRHIGH         (uint8_t*)0x50
 #define EEPROM_UID            (uint8_t*)0xB0
-#define EEPROM_LEFT_ROTATE    (uint8_t*)0x05
-#define EEPROM_RIGHT_ROTATE   (uint8_t*)0x09
-#define EEPROM_LEFT_STRAIGHT  (uint8_t*)0x0C
-#define EEPROM_RIGHT_STRAIGHT (uint8_t*)0x14
+#define EEPROM_LEFT_ROTATE    (uint8_t*)0x08
+#define EEPROM_RIGHT_ROTATE   (uint8_t*)0x04
+#define EEPROM_LEFT_STRAIGHT  (uint8_t*)0x13
+#define EEPROM_RIGHT_STRAIGHT (uint8_t*)0x0B
 #define TX_MASK_MAX   ((1<<0)|(1<<1)|(1<<2)|(1<<6)|(1<<7))
 #define TX_MASK_MIN   ((1<<0))
 
