@@ -20,7 +20,14 @@ message_t msg;
 bootmsg_t *bootmsg;
 gpsmsg_t *gpsmsg;
 
-#ifdef ARDUINO
+#if defined(BIGOHC)
+#define ir_port PORTD
+#define ir_ddr DDRD
+#define ir_mask (1<<4)
+#define led_port PORTC
+#define led_ddr DDRC
+#define led_mask (1<<0)
+#elif defined(ARDUINO)
 #define ir_port PORTB
 #define ir_ddr DDRB
 #define ir_mask (1<<1)
