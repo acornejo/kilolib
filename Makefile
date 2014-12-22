@@ -43,7 +43,7 @@ build:
 	mkdir -p $@
 
 message_send.o: message_send.S
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(KILOLIB): kilolib.o message_crc.o message_send.o | build
 	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o 
