@@ -42,6 +42,9 @@ EEPROM = -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lm
 build:
 	mkdir -p $@
 
+message_send.o: message_send.S
+	$(CC) $(CFLAGS) -o $@ $<
+
 $(KILOLIB): kilolib.o message_crc.o message_send.o | build
 	$(AVRAR) rcs $@ kilolib.o message_crc.o message_send.o 
 	rm -f *.o
