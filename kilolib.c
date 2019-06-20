@@ -23,6 +23,15 @@
 #define TX_MASK_MAX   ((1<<0)|(1<<1)|(1<<2)|(1<<6)|(1<<7))
 #define TX_MASK_MIN   ((1<<0))
 
+// Parameters for battery protection
+#define N_READINGS_VOLTAGE 10
+#define N_REPETITIONS_LOW_VOLTAGE 5
+#define LOW_VOLTAGE_THRESHOLD 547       // Equivalent to 3.2V
+#define HIGH_VOLTAGE_THRESHOLD 716      // Equivalent to 4.2V
+
+// Parameter for IR filter
+#define THRESHOLD_N_COMMANDS 10
+
 /* Number of clock cycles per bit. */
 #define rx_bitcycles 269
 /* Number of clock cycles for an entire message. */
@@ -48,6 +57,12 @@ uint8_t rx_byteindex;              // index to the current byte being decoded
 uint8_t rx_bytevalue;              // value of the current byte being decoded
 volatile uint8_t tx_mask;
 volatile uint16_t kilo_tx_period;
+
+int16_t voltage = -1;                   // Voltage estimation
+uint8_t is_in_low_voltage = 0;          // Number of consecutive times it reads a voltage below the low-voltage threshold
+uint8_t counter_ticks_for_voltage = 0;  // To estimate voltage every 255 ticks (~8 seconds)
+
+uint8_t n_commands_received;        // Number of consecutive commands received from the programmer (or noise)
 
 #ifndef BOOTLOADER
 uint16_t tx_clock;                 // number of timer cycles we have waited
@@ -143,12 +158,45 @@ enum {
 
 static volatile uint8_t prev_motion = MOVE_STOP, cur_motion = MOVE_STOP;
 
-void kilo_start(void (*setup)(void), void (*loop)(void)) {
+/*
+ * This function estimates the voltage of the battery by taking the maximum of N_READINGS_VOLTAGE measurements. This function triggers high gain at the end if trigger_high_gain = 1. This means the next voltage reading will not be valid, but all the other functions that use the adc converter will work normally (e.g., distance estimation). This is useful in the RUNNING state. If trigger_high_gain = 0, the next voltage reading will be valid, but not the rest of functions using the adc converter (useful when not in the RUNNING state).
+ */
+int16_t estimate_voltage(uint8_t trigger_high_gain){
+
+    uint8_t i;
     int16_t voltage;
+    int16_t estimated_voltage = -1;
+
+    for(i = 0; i < N_READINGS_VOLTAGE; i++){
+
+        voltage = get_voltage();
+    
+        if(voltage <= HIGH_VOLTAGE_THRESHOLD && voltage > estimated_voltage){
+          
+            estimated_voltage = voltage;
+          
+        }
+    }
+
+    if(trigger_high_gain){
+        cli();
+        adc_trigger_high_gain();
+        sei();
+    }
+
+    return estimated_voltage;
+}
+
+
+void kilo_start(void (*setup)(void), void (*loop)(void)) {
+
     uint8_t has_setup = 0;
+
     while (1) {
+
         switch(kilo_state) {
             case SLEEPING:
+
                 cli();
                 acomp_off();
                 adc_off();
@@ -168,22 +216,101 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
                 _delay_us(300);
                 acomp_on();
 
-                set_color(RGB(3,3,3));
-                _delay_ms(10);
-                if (rx_busy) {
+                if(is_in_low_voltage == N_REPETITIONS_LOW_VOLTAGE){ // Low battery
+
                     set_color(RGB(3,0,0));
-                    _delay_ms(100);
+
+                    _delay_ms(1000);
+                    set_color(RGB(0,0,0));
+    
                 }
-                set_color(RGB(0,0,0));
+                else{
+
+                    voltage = estimate_voltage(0);
+
+                    if(voltage != -1 && voltage < LOW_VOLTAGE_THRESHOLD){
+
+                        is_in_low_voltage++;
+
+                    }
+                    else if(voltage != -1){
+
+                        is_in_low_voltage = 0;
+                        
+                    }
+
+                    if(voltage > 682)
+                        set_color(RGB(0,3,0));
+                    else if(voltage > 648)
+                        set_color(RGB(0,0,3));
+                    else if(voltage > 614)
+                        set_color(RGB(3,3,0));
+                    else if(voltage != -1)
+                        set_color(RGB(3,0,0));
+                    else
+                        set_color(RGB(3,3,3));
+
+                    _delay_ms(10);
+                    if (rx_busy) {
+                        set_color(RGB(0,3,0));
+                        _delay_ms(100);
+                    }
+                    set_color(RGB(0,0,0));
+                }
+
                 break;
             case IDLE:
-                set_color(RGB(0,3,0));
-                _delay_ms(1);
-                set_color(RGB(0,0,0));
-                _delay_ms(200);
+
+                if(rx_busy){
+
+                    set_color(RGB(0,3,0));
+                    _delay_ms(1);
+                    set_color(RGB(0,0,0));
+                    _delay_ms(200);
+
+                }
+
+                else if(is_in_low_voltage < N_REPETITIONS_LOW_VOLTAGE){
+
+                    voltage = estimate_voltage(0);
+
+                    if(voltage != -1 && voltage < LOW_VOLTAGE_THRESHOLD){
+
+                        is_in_low_voltage++;
+
+                    }
+                    else if(voltage != -1){
+
+                        is_in_low_voltage = 0;
+                        
+                    }
+
+                    if(voltage > 682)
+                        set_color(RGB(0,3,0));
+                    else if(voltage > 648)
+                        set_color(RGB(0,0,3));
+                    else if(voltage > 614)
+                        set_color(RGB(3,3,0));
+                    else if(voltage != -1)
+                        set_color(RGB(3,0,0));
+                    else
+                        set_color(RGB(3,3,3));
+
+
+                    _delay_ms(1);
+                    set_color(RGB(0,0,0));
+                    _delay_ms(200);
+
+                }
+                else{
+                    kilo_state = SLEEPING;
+                }
+
                 break;
             case BATTERY:
                 voltage = get_voltage();
+                is_in_low_voltage = 0;
+
                 if(voltage > 682)
                     set_color(RGB(0,3,0));
                 else if(voltage > 648)
@@ -192,8 +319,10 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
                     set_color(RGB(3,3,0));
                 else
                     set_color(RGB(3,0,0));
+
                 break;
             case CHARGING:
+                is_in_low_voltage = 0;
                 if (is_charging()) {
                     set_color(RGB(1,0,0));
                     _delay_ms(1);
@@ -201,17 +330,59 @@ void kilo_start(void (*setup)(void), void (*loop)(void)) {
                     _delay_ms(200);
                 } else
                     set_color(RGB(0,0,0));
+
                 break;
             case SETUP:
                 if (!has_setup) {
                     setup();
                     has_setup = 1;
                 }
+                is_in_low_voltage = 0;
                 kilo_state = RUNNING;
             case RUNNING:
-                loop();
+
+                if(rx_busy){
+
+                    loop();
+
+                }
+
+                else if(is_in_low_voltage < N_REPETITIONS_LOW_VOLTAGE){
+
+                    // Estimate voltage every 8 seconds, approximately
+                    cli(); // Disable interrupts to read or write variable counter_ticks_for_voltage
+                    if(counter_ticks_for_voltage == 255){
+
+                        counter_ticks_for_voltage = 0;
+                        sei(); // Enable interrupts
+
+                        voltage = estimate_voltage(1);
+
+                        if(voltage != -1 && voltage < LOW_VOLTAGE_THRESHOLD){
+
+                            is_in_low_voltage++;
+
+                        }
+                        else if(voltage != -1){
+
+                            is_in_low_voltage = 0;
+                            
+                        }
+                    }
+                    else
+                        sei(); // Enable interrupts
+
+                    loop();
+
+                }
+                else{
+                    kilo_state = SLEEPING;
+                }
+
+
                 break;
             case MOVING:
+                is_in_low_voltage = 0;
                 if (cur_motion == MOVE_STOP) {
                     set_motors(0,0);
                     prev_motion = MOVE_STOP;
@@ -244,97 +415,114 @@ static inline void process_message() {
     calibmsg_t *calibmsg = (calibmsg_t*)&rx_msg.data;
     if (rx_msg.type < BOOT) {
         kilo_message_rx(&rx_msg, &rx_dist);
+        
+        n_commands_received = 0;
         return;
     }
-    if (rx_msg.type != READUID && rx_msg.type != RUN && rx_msg.type != CALIB)
-        motors_off();
-    switch (rx_msg.type) {
-        case BOOT:
-            tx_timer_off();
-            bootload();
-            break;
-        case RESET:
-            reset();
-            break;
-        case SLEEP:
-            kilo_state = SLEEPING;
-            break;
-        case WAKEUP:
-            kilo_state = IDLE;
-            break;
-        case CHARGE:
-            kilo_state = CHARGING;
-            break;
-        case VOLTAGE:
-            kilo_state = BATTERY;
-            break;
-        case RUN:
-            if (kilo_state != SETUP && kilo_state != RUNNING) {
-                motors_on();
-                kilo_state = SETUP;
-            }
-            break;
-        case CALIB:
-            switch(calibmsg->mode) {
-                case CALIB_SAVE:
-                    if (kilo_state == MOVING) {
-                        eeprom_write_byte(EEPROM_UID, kilo_uid&0xFF);
-                        eeprom_write_byte(EEPROM_UID+1, (kilo_uid>>8)&0xFF);
-                        eeprom_write_byte(EEPROM_LEFT_ROTATE, kilo_turn_left);
-                        eeprom_write_byte(EEPROM_RIGHT_ROTATE, kilo_turn_right);
-                        eeprom_write_byte(EEPROM_LEFT_STRAIGHT, kilo_straight_left);
-                        eeprom_write_byte(EEPROM_RIGHT_STRAIGHT, kilo_straight_right);
-                        motors_off();
-                        kilo_state = IDLE;
-                    }
-                    break;
-                case CALIB_UID:
-                    kilo_uid = calibmsg->uid;
-                    cur_motion = MOVE_STOP;
-                    break;
-                case CALIB_TURN_LEFT:
-                    if (cur_motion != MOVE_LEFT || kilo_turn_left != calibmsg->turn_left) {
-                        prev_motion = MOVE_STOP;
-                        cur_motion = MOVE_LEFT;
-                        kilo_turn_left = calibmsg->turn_left;
-                    }
-                    break;
-                case CALIB_TURN_RIGHT:
-                    if (cur_motion != MOVE_RIGHT || kilo_turn_right != calibmsg->turn_right) {
-                        prev_motion = MOVE_STOP;
-                        cur_motion = MOVE_RIGHT;
-                        kilo_turn_right = calibmsg->turn_right;
-                    }
-                    break;
-                case CALIB_STRAIGHT:
-                    if (cur_motion != MOVE_STRAIGHT || kilo_straight_right != calibmsg->straight_right || kilo_straight_left != calibmsg->straight_left) {
-                        prev_motion = MOVE_STOP;
-                        cur_motion = MOVE_STRAIGHT;
-                        kilo_straight_left = calibmsg->straight_left;
-                        kilo_straight_right = calibmsg->straight_right;
-                    }
-                    break;
-            }
-            if (calibmsg->mode != CALIB_SAVE && kilo_state != MOVING) {
-                motors_on();
-                kilo_state = MOVING;
-            }
-            break;
-        case READUID:
-            if (kilo_state != MOVING) {
-                motors_on();
-                set_color(RGB(0,0,0));
-                prev_motion = cur_motion = MOVE_STOP;
-                kilo_state = MOVING;
-            }
+    
+    // Doesn't respond to other signals apart from neighbors while running if a few received
+    if(kilo_state == RUNNING && n_commands_received < THRESHOLD_N_COMMANDS){
+    
+        n_commands_received++;
+        
+        return;
+    }
+    
+    // In RUNNING state, it has to receive at least THREHOLD_N_COMMANDS continuous commands to react
+    else if( (kilo_state == RUNNING && n_commands_received == THRESHOLD_N_COMMANDS) || (kilo_state != RUNNING)){
+    
+        n_commands_received = 0;
 
-            if (kilo_uid&(1<<rx_msg.data[0]))
-                cur_motion = MOVE_LEFT;
-            else
-                cur_motion = MOVE_STOP;
-            break;
-        default:
-            break;
+        if (rx_msg.type != READUID && rx_msg.type != RUN && rx_msg.type != CALIB)
+            motors_off();
+        switch (rx_msg.type) {
+            case BOOT:
+                tx_timer_off();
+                bootload();
+                break;
+            case RESET:
+                reset();
+                break;
+            case SLEEP:
+                kilo_state = SLEEPING;
+                break;
+            case WAKEUP:
+                kilo_state = IDLE;
+                break;
+            case CHARGE:
+                kilo_state = CHARGING;
+                break;
+            case VOLTAGE:
+                kilo_state = BATTERY;
+                break;
+            case RUN:
+                if (kilo_state != SETUP && kilo_state != RUNNING) {
+                    motors_on();
+                    kilo_state = SETUP;
+                }
+                break;
+            case CALIB:
+                switch(calibmsg->mode) {
+                    case CALIB_SAVE:
+                        if (kilo_state == MOVING) {
+                            eeprom_write_byte(EEPROM_UID, kilo_uid&0xFF);
+                            eeprom_write_byte(EEPROM_UID+1, (kilo_uid>>8)&0xFF);
+                            eeprom_write_byte(EEPROM_LEFT_ROTATE, kilo_turn_left);
+                            eeprom_write_byte(EEPROM_RIGHT_ROTATE, kilo_turn_right);
+                            eeprom_write_byte(EEPROM_LEFT_STRAIGHT, kilo_straight_left);
+                            eeprom_write_byte(EEPROM_RIGHT_STRAIGHT, kilo_straight_right);
+                            motors_off();
+                            kilo_state = IDLE;
+                        }
+                        break;
+                    case CALIB_UID:
+                        kilo_uid = calibmsg->uid;
+                        cur_motion = MOVE_STOP;
+                        break;
+                    case CALIB_TURN_LEFT:
+                        if (cur_motion != MOVE_LEFT || kilo_turn_left != calibmsg->turn_left) {
+                            prev_motion = MOVE_STOP;
+                            cur_motion = MOVE_LEFT;
+                            kilo_turn_left = calibmsg->turn_left;
+                        }
+                        break;
+                    case CALIB_TURN_RIGHT:
+                        if (cur_motion != MOVE_RIGHT || kilo_turn_right != calibmsg->turn_right) {
+                            prev_motion = MOVE_STOP;
+                            cur_motion = MOVE_RIGHT;
+                            kilo_turn_right = calibmsg->turn_right;
+                        }
+                        break;
+                    case CALIB_STRAIGHT:
+                        if (cur_motion != MOVE_STRAIGHT || kilo_straight_right != calibmsg->straight_right || kilo_straight_left != calibmsg->straight_left) {
+                            prev_motion = MOVE_STOP;
+                            cur_motion = MOVE_STRAIGHT;
+                            kilo_straight_left = calibmsg->straight_left;
+                            kilo_straight_right = calibmsg->straight_right;
+                        }
+                        break;
+                }
+                if (calibmsg->mode != CALIB_SAVE && kilo_state != MOVING) {
+                    motors_on();
+                    kilo_state = MOVING;
+                }
+                break;
+            case READUID:
+                if (kilo_state != MOVING) {
+                    motors_on();
+                    set_color(RGB(0,0,0));
+                    prev_motion = cur_motion = MOVE_STOP;
+                    kilo_state = MOVING;
+                }
+
+                if (kilo_uid&(1<<rx_msg.data[0]))
+                    cur_motion = MOVE_LEFT;
+                else
+                    cur_motion = MOVE_STOP;
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -429,13 +617,16 @@ int16_t get_voltage() {
         adc_start_conversion();
         adc_finish_conversion();
         voltage = ADCW;                           // store AD result
-//        adc_trigger_high_gain();                     // set AD to measure high gain (for distance sensing)
+        
+        //adc_trigger_high_gain();                     // set AD to measure high gain (for distance sensing)
+            
         sei();                                    // reenable interrupts
     }
     return voltage;
 }
 
 uint8_t estimate_distance(const distance_measurement_t *dist) {
+
     uint8_t i;
     uint8_t index_high=13;
     uint8_t index_low=255;
@@ -504,6 +695,10 @@ ISR(TIMER0_COMPA_vect) {
     tx_increment = 0xFF;
     OCR0A = tx_increment;
     kilo_ticks++;
+
+    // Increments counter_ticks_for_voltage by 1 tick until 255
+    if(kilo_state == RUNNING && counter_ticks_for_voltage < 255)
+        counter_ticks_for_voltage++;
 
     if(!rx_busy && tx_clock>kilo_tx_period && kilo_state == RUNNING) {
         message_t *msg = kilo_message_tx();
